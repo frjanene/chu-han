@@ -1,5 +1,5 @@
 /* Service worker: lưu app và dữ liệu nét chữ để dùng offline */
-const VERSION = 'hanzi-pwa-v1';
+const VERSION = 'hanzi-pwa-v2';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 const LIB = 'https://cdn.jsdelivr.net/npm/hanzi-writer@3/dist/hanzi-writer.min.js';
 
@@ -28,7 +28,7 @@ self.addEventListener('fetch', e => {
 
   // File của app: ưu tiên mạng để nhận bản mới, mất mạng thì dùng cache
   if (url.origin === self.location.origin) {
-    e.respondWith(fetch(req).then(res => {
+    e.respondWith(fetch(req, {cache: 'no-cache'}).then(res => {
       if (res.ok) caches.open(VERSION).then(c => c.put(req, res.clone()));
       return res;
     }).catch(() => caches.match(req).then(hit => hit || (req.mode === 'navigate' ? caches.match('./index.html') : Response.error()))));

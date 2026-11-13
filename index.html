@@ -256,7 +256,10 @@
           <button class="btn danger" id="syncOffBtn">Ngắt kết nối</button>
         </div>
       </div>
-      <p class="muted" id="syncMsg" style="margin-bottom:0"></p>
+      <p class="muted" id="syncHostWarn" style="color:var(--bad)"></p>
+      <button class="btn small" id="syncDiagBtn" style="margin-top:10px">🩺 Kiểm tra đồng bộ</button>
+      <p class="muted" id="syncMsg" style="margin-bottom:0;white-space:pre-line"></p>
+      <p class="muted" style="margin:10px 0 0;font-size:.75rem">Phiên bản app: <span id="appVer"></span></p>
     </div>
   </section>
 
@@ -752,6 +755,7 @@
   $('cYes').addEventListener('click', ()=>{ const f=cFn; cFn=null; show('cModal',false); if(f) f(); });
 
   // ================= Đồng bộ qua GitHub Gist =================
+  var APP_VERSION = '1.4';
   var syncInit = false;
   var SYNC_KEY = 'hanzi-trainer-sync', GIST_FILE = 'hanzi-trainer-data.json';
   var syncCfg = (function(){ try{ return JSON.parse(localStorage.getItem(SYNC_KEY)) || {}; }catch(e){ return {}; } })();
@@ -771,9 +775,16 @@
     opts = opts || {};
     const headers = {'Authorization':'Bearer '+syncCfg.token, 'Accept':'application/vnd.github+json'};
     if(opts.body) headers['Content-Type']='application/json';
-    const r = await fetch('https://api.github.com'+path, {method:opts.method||'GET', body:opts.body, headers, cache:'no-store'});
-    if(!r.ok){ const e=new Error('HTTP '+r.status); e.status=r.status; throw e; }
-    return r.status===204 ? null : r.json();
+    let r;
+    try{ r = await fetch('https://api.github.com'+path, {method:opts.method||'GET', body:opts.body, headers, cache:'no-store'}); }
+    catch(err){ const e=new Error('NETWORK'); e.status=0; throw e; }
+    if(!r.ok){
+      let msg=''; try{ msg=(await r.json()).message||''; }catch(_){}
+      const e=new Error('HTTP '+r.status+(msg?(' – '+msg):'')); e.status=r.status; e.ghMsg=msg; throw e;
+    }
+    const data = r.status===204 ? null : await r.json();
+    if(opts.withHeaders) return {data, scopes: r.headers.get('x-oauth-scopes')};
+    return data;
   }
   function payload(){ return {v:1, words:db.words, tomb:db.tomb, sessions:db.sessions||0}; }
   function mergeData(remote){
@@ -843,9 +854,8 @@
       syncCfg.last = Date.now(); saveSyncCfg();
       setBadge('☁️ '+hhmm(syncCfg.last)); $('syncMsg').textContent='';
     }catch(e){
-      if(e.status===401){ setBadge('☁️ lỗi token'); $('syncMsg').textContent='Token không hợp lệ hoặc đã hết hạn. Hãy ngắt kết nối và dán token mới.'; }
-      else if(e.status===403){ setBadge('☁️ lỗi'); $('syncMsg').textContent='Token thiếu quyền "gist" hoặc GitHub tạm giới hạn truy cập.'; }
-      else { setBadge('☁️ chưa đồng bộ'); $('syncMsg').textContent='Chưa đồng bộ được (mạng yếu?). App sẽ thử lại sau.'; }
+      setBadge(e.status===401 ? '☁️ lỗi token' : '☁️ lỗi');
+      $('syncMsg').textContent = explainErr(e) + '\nBấm "🩺 Kiểm tra đồng bộ" để xem chi tiết.';
     }finally{
       syncBusy = false; renderSyncUI();
       if(syncPending){ syncPending = false; setTimeout(syncNow, 500); }
@@ -871,9 +881,46 @@
       toast('Đã bật đồng bộ');
     }catch(e){
       syncCfg = {}; saveSyncCfg(); renderSyncUI();
-      $('syncMsg').textContent = e.status===401 ? 'Token không đúng. Kiểm tra lại rồi dán lại.' :
-        (e.status===403||e.status===404) ? 'Token cần được cấp quyền "gist".' : 'Không kết nối được. Kiểm tra mạng rồi thử lại.';
+      $('syncMsg').textContent = explainErr(e) + '\nBấm "🩺 Kiểm tra đồng bộ" để xem chi tiết.';
     }finally{ btn.disabled = false; }
+  });
+  function explainErr(e){
+    if(e.status===0) return '✗ Không gọi được tới GitHub. Có thể mất mạng, hoặc bạn đang mở bản trong Claude (bản đó không đồng bộ được, hãy mở bản github.io).';
+    if(e.status===401) return '✗ Token sai, đã hết hạn hoặc đã bị xóa. Hãy tạo token mới rồi dán lại.';
+    if(e.status===403||e.status===404) return '✗ Token chưa có quyền Gist (lỗi '+e.status+'). Token classic: tick ô "gist". Token fine-grained: Account permissions → Gists → Read and write.';
+    if(e.status===422) return '✗ GitHub từ chối dữ liệu (lỗi 422): '+(e.ghMsg||'');
+    return '✗ Lỗi GitHub: '+e.message;
+  }
+  $('syncDiagBtn').addEventListener('click', async ()=>{
+    const out=[]; const put=t=>{ out.push(t); $('syncMsg').textContent=out.join('\n'); };
+    $('syncMsg').textContent='Đang kiểm tra…';
+    put('• Phiên bản: '+APP_VERSION+' · địa chỉ: '+location.hostname);
+    if(!/github\.io$/.test(location.hostname)) put('⚠️ Không phải bản github.io. Bản trong Claude không đồng bộ được.');
+    put(navigator.onLine ? '✓ Có mạng' : '✗ Thiết bị đang offline');
+    const tok = syncCfg.token || $('tokIn').value.trim();
+    if(!tok){ put('✗ Chưa có token. Dán token vào ô rồi bấm Kết nối.'); return; }
+    const saved = syncCfg; syncCfg = Object.assign({}, saved, {token: tok});
+    try{
+      const u = await gh('/user', {withHeaders:true});
+      put('✓ Token hợp lệ, tài khoản: '+u.data.login);
+      if(u.scopes!==null){
+        const sc = u.scopes.split(',').map(x=>x.trim()).filter(Boolean);
+        put(sc.includes('gist') ? '✓ Token classic có quyền gist' : '✗ Token classic CHƯA có quyền gist (đang có: '+(sc.join(', ')||'không có')+'). Hãy sửa token và tick ô "gist".');
+      } else put('• Token fine-grained: cần quyền Gists → Read and write');
+      const list = await gh('/gists?per_page=100');
+      const found = list.find(g=>g.files && g.files[GIST_FILE]);
+      put(found ? ('✓ Đã tìm thấy kho dữ liệu trên GitHub ('+found.id.slice(0,7)+'…)') : '• Chưa có kho dữ liệu trên GitHub (sẽ được tạo khi bấm Kết nối)');
+      if(saved.gistId){
+        put(found && found.id===saved.gistId ? '✓ Máy này đang dùng đúng kho đó' : '⚠️ Máy này đang dùng một kho khác ('+saved.gistId.slice(0,7)+'…). Hãy bấm Ngắt kết nối rồi Kết nối lại.');
+        const g = await gh('/gists/'+saved.gistId);
+        let n='?'; try{ n = JSON.parse(g.files[GIST_FILE].content).words.length; }catch(_){}
+        put('✓ Đọc được kho dữ liệu: '+n+' từ trên GitHub, '+db.words.length+' từ trên máy này');
+        await gh('/gists/'+saved.gistId, {method:'PATCH', body: JSON.stringify({description:'Dữ liệu app Luyện viết chữ Hán (tự động đồng bộ)'})});
+        put('✓ Ghi thử lên GitHub thành công');
+        put(syncCfg.last ? ('• Lần đồng bộ gần nhất: '+new Date(syncCfg.last).toLocaleString('vi-VN')) : '• Máy này chưa đồng bộ lần nào');
+      } else put('• Máy này chưa kết nối. Bấm Kết nối để bắt đầu đồng bộ.');
+    }catch(e){ put(explainErr(e)); }
+    finally{ syncCfg = saved; }
   });
   $('syncNowBtn').addEventListener('click', syncNow);
   $('syncOffBtn').addEventListener('click', ()=>askConfirm('Ngắt đồng bộ trên thiết bị này? Dữ liệu trên máy và trên GitHub vẫn được giữ.', ()=>{
@@ -884,6 +931,8 @@
   window.addEventListener('offline', ()=>{ if(syncOn()) setBadge('☁️ offline'); });
   setInterval(()=>{ if(document.visibilityState==='visible') syncNow(); }, 90000);
   syncInit = true;
+  $('appVer').textContent = APP_VERSION;
+  if(!/github\.io$/.test(location.hostname) && location.protocol.startsWith('http')) $('syncHostWarn').textContent = 'Bạn đang mở app ở '+location.hostname+'. Đồng bộ chỉ chạy trên bản github.io.';
   renderSyncUI();
   if(syncOn()) setTimeout(syncNow, 800);
   renderStartInfo();
