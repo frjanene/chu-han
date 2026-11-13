@@ -23,7 +23,9 @@
   body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif;background:var(--bg);color:var(--ink)}
   .hz{font-family:"Noto Serif SC","Songti SC","SimSun","KaiTi",serif}
   header{background:var(--accent);color:#fff;padding:calc(14px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 0 calc(16px + env(safe-area-inset-left))}
-  header h1{margin:0 0 10px;font-size:1.15rem;font-weight:700;letter-spacing:.3px}
+  header h1{margin:0 0 10px;font-size:1.15rem;font-weight:700;letter-spacing:.3px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .sync-badge{font-size:.75rem;font-weight:600;background:rgba(255,255,255,.18);padding:4px 8px;border-radius:999px;white-space:nowrap}
+  .sync-badge:empty{display:none}
   nav{display:flex;gap:4px}
   nav button{flex:1;border:0;background:transparent;color:#fecaca;padding:10px 6px;font-size:.95rem;font-weight:600;border-radius:10px 10px 0 0;cursor:pointer}
   nav button.active{background:var(--bg);color:var(--accent)}
@@ -97,7 +99,7 @@
 </head>
 <body>
 <header>
-  <h1>✍️ Luyện viết chữ Hán</h1>
+  <h1><span>✍️ Luyện viết chữ Hán</span><span class="sync-badge" id="syncBadge"></span></h1>
   <nav>
     <button data-tab="practice" class="active">Luyện tập</button>
     <button data-tab="vocab">Từ vựng</button>
@@ -215,6 +217,24 @@
       <button class="btn" id="offlineBtn" style="width:100%;margin-top:10px">⬇️ Tải dữ liệu nét để dùng offline</button>
       <p class="muted" id="offlineInfo" style="margin-bottom:0">App tự tải dữ liệu nét khi bạn thêm từ. Bấm nút này khi có mạng để chắc chắn mọi từ đều dùng được offline.</p>
     </div>
+    <div class="card" id="syncCard">
+      <h2>☁️ Đồng bộ giữa các thiết bị</h2>
+      <div id="syncOff">
+        <p class="muted" style="margin-top:0">Từ vựng và thống kê được lưu vào một GitHub Gist <b>riêng tư</b> của bạn. Mỗi thiết bị chỉ cần dán token một lần, sau đó app tự đồng bộ.</p>
+        <label for="tokIn">GitHub token (quyền <b>gist</b>)</label>
+        <input id="tokIn" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="ghp_...">
+        <div style="height:8px"></div>
+        <button class="btn primary" id="syncConnect" style="width:100%">Kết nối</button>
+      </div>
+      <div id="syncOn" class="hidden">
+        <p id="syncWho" style="margin-top:0"></p>
+        <div class="row">
+          <button class="btn" id="syncNowBtn">↻ Đồng bộ ngay</button>
+          <button class="btn danger" id="syncOffBtn">Ngắt kết nối</button>
+        </div>
+      </div>
+      <p class="muted" id="syncMsg" style="margin-bottom:0"></p>
+    </div>
   </section>
 
   <!-- ============ STATS ============ -->
@@ -294,7 +314,7 @@
   function newWord(w){
     return {id: Date.now().toString(36)+Math.random().toString(36).slice(2,7),
       hanzi:w.hanzi, pinyin:w.pinyin||'', meaning:w.meaning||'',
-      correct:0, wrong:0, strokesOk:0, strokesBad:0, last:null};
+      correct:0, wrong:0, strokesOk:0, strokesBad:0, last:null, u:Date.now()};
   }
   function load(){
     try{
@@ -305,10 +325,13 @@
   }
   let db = load();
   db.settings = Object.assign({showPinyin:false, order:'random', strict:'1'}, db.settings||{});
-  function save(){
+  db.tomb = db.tomb || {};
+  function touch(w){ if(w) w.u = Date.now(); }
+  function saveLocal(){
     try{ localStorage.setItem(LS_KEY, JSON.stringify(db)); }
     catch(e){ toast('Không lưu được vào LocalStorage'); }
   }
+  function save(){ saveLocal(); schedulePush(); }
   save();
 
   // ---------- Helpers ----------
@@ -367,6 +390,7 @@
     if(!meaning.trim()){ if(!silent) toast('Hãy nhập nghĩa tiếng Việt'); return false; }
     if(db.words.some(w=>w.hanzi===h)){ if(!silent) toast('"'+h+'" đã có trong danh sách'); return false; }
     db.words.push(newWord({hanzi:h, pinyin:pinyin.trim(), meaning:meaning.trim()}));
+    delete db.tomb[h];
     return true;
   }
   $('addBtn').addEventListener('click', ()=>{
@@ -397,12 +421,12 @@
   });
   $('clearBtn').addEventListener('click', ()=>{
     if(!db.words.length) return;
-    askConfirm('Xóa toàn bộ '+db.words.length+' từ và thống kê của chúng?', ()=>{ db.words=[]; save(); renderVocab(); });
+    askConfirm('Xóa toàn bộ '+db.words.length+' từ và thống kê của chúng?', ()=>{ const t=Date.now(); db.words.forEach(w=>{ db.tomb[w.hanzi]=t; }); db.words=[]; save(); renderVocab(); });
   });
   $('vList').addEventListener('click', e=>{
     const b = e.target.closest('button[data-del]'); if(!b) return;
     const w = db.words.find(x=>x.id===b.dataset.del); if(!w) return;
-    askConfirm('Xóa từ "'+w.hanzi+'"?', ()=>{ db.words = db.words.filter(x=>x.id!==w.id); save(); renderVocab(); });
+    askConfirm('Xóa từ "'+w.hanzi+'"?', ()=>{ db.tomb[w.hanzi]=Date.now(); db.words = db.words.filter(x=>x.id!==w.id); save(); renderVocab(); });
   });
   function renderVocab(){
     $('vCount').textContent = db.words.length;
@@ -432,7 +456,7 @@
   }
   $('resetStatsBtn').addEventListener('click', ()=>{
     askConfirm('Đặt lại toàn bộ thống kê (giữ nguyên từ vựng)?', ()=>{
-      db.words.forEach(w=>{w.correct=w.wrong=w.strokesOk=w.strokesBad=0; w.last=null;}); db.sessions=0; save(); renderStats();
+      db.words.forEach(w=>{w.correct=w.wrong=w.strokesOk=w.strokesBad=0; w.last=null; touch(w);}); db.sessions=0; save(); renderStats();
     });
   });
 
@@ -526,7 +550,7 @@
       leniency: parseFloat(db.settings.strict)||1,
       onMistake: function(sd){
         if(thisChar!==ci) return;
-        wordMistakes++; cur.strokesBad++; save();
+        wordMistakes++; cur.strokesBad++; touch(cur); save();
         if(sd.mistakesOnStroke>=3 || sd.totalMistakes>3){
           setFeedback('✗ Sai nét '+(sd.strokeNum+1)+'. Gợi ý: nét tiếp theo đang nhấp nháy','warn');
           autoHinted=true;
@@ -537,7 +561,7 @@
       },
       onCorrectStroke: function(sd){
         if(thisChar!==ci) return;
-        cur.strokesOk++; save();
+        cur.strokesOk++; touch(cur); save();
         curStroke = sd.strokeNum+1;
         const total = sd.strokeNum+1+sd.strokesRemaining;
         setFeedback('✓ Đúng nét '+(sd.strokeNum+1)+' / '+total,'ok');
@@ -584,7 +608,7 @@
   function finishWord(){
     const ok = !gaveUp && wordMistakes===0 && hintsUsed===0 && !autoHinted;
     if(ok){ cur.correct++; sessOk++; } else { cur.wrong++; sessBad++; sessWeak.push(cur.hanzi); }
-    cur.last = Date.now(); save();
+    cur.last = Date.now(); touch(cur); save();
     show('quizCard',false); show('resultCard',true);
     $('resultBadge').innerHTML = ok ? '<span class="badge ok">✓ Viết đúng từ trí nhớ</span>' : '<span class="badge bad">✗ Cần ôn lại</span>';
     $('rHanzi').textContent = cur.hanzi;
@@ -656,6 +680,142 @@
   if(navigator.storage && navigator.storage.persist){ navigator.storage.persist().catch(()=>{}); }
   $('cNo').addEventListener('click', ()=>{ cFn=null; show('cModal',false); });
   $('cYes').addEventListener('click', ()=>{ const f=cFn; cFn=null; show('cModal',false); if(f) f(); });
+
+  // ================= Đồng bộ qua GitHub Gist =================
+  var syncInit = false;
+  var SYNC_KEY = 'hanzi-trainer-sync', GIST_FILE = 'hanzi-trainer-data.json';
+  var syncCfg = (function(){ try{ return JSON.parse(localStorage.getItem(SYNC_KEY)) || {}; }catch(e){ return {}; } })();
+  var syncBusy = false, syncPending = false, pushTimer = null;
+  function saveSyncCfg(){ try{ localStorage.setItem(SYNC_KEY, JSON.stringify(syncCfg)); }catch(e){} }
+  function syncOn(){ return !!(syncCfg.token && syncCfg.gistId); }
+  function setBadge(t){ $('syncBadge').textContent = t; }
+  function hhmm(ts){ const d=new Date(ts); return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0'); }
+  function renderSyncUI(){
+    show('syncOff', !syncOn()); show('syncOn', syncOn());
+    if(syncOn()){
+      $('syncWho').innerHTML = 'Đã kết nối tài khoản <b>'+esc(syncCfg.login||'GitHub')+'</b>'+(syncCfg.last?(' · lần cuối '+hhmm(syncCfg.last)):'');
+      if(!$('syncBadge').textContent) setBadge(navigator.onLine ? '☁️' : '☁️ offline');
+    } else setBadge('');
+  }
+  async function gh(path, opts){
+    opts = opts || {};
+    const headers = {'Authorization':'Bearer '+syncCfg.token, 'Accept':'application/vnd.github+json'};
+    if(opts.body) headers['Content-Type']='application/json';
+    const r = await fetch('https://api.github.com'+path, {method:opts.method||'GET', body:opts.body, headers, cache:'no-store'});
+    if(!r.ok){ const e=new Error('HTTP '+r.status); e.status=r.status; throw e; }
+    return r.status===204 ? null : r.json();
+  }
+  function payload(){ return {v:1, words:db.words, tomb:db.tomb, sessions:db.sessions||0}; }
+  function mergeData(remote){
+    const rw = Array.isArray(remote.words) ? remote.words : [];
+    const tomb = Object.assign({}, remote.tomb||{});
+    Object.keys(db.tomb).forEach(k=>{ tomb[k] = Math.max(tomb[k]||0, db.tomb[k]); });
+    const map = new Map(), order = [];
+    const consider = w=>{
+      if(!w || !w.hanzi) return;
+      const c = map.get(w.hanzi);
+      if(!c){ map.set(w.hanzi, w); order.push(w.hanzi); }
+      else if((w.u||0) > (c.u||0)) map.set(w.hanzi, w);
+    };
+    db.words.forEach(consider); rw.forEach(consider);
+    const words = [];
+    order.forEach(h=>{
+      const w = map.get(h);
+      if(tomb[h] && tomb[h] >= (w.u||0)) return;
+      delete tomb[h];
+      if(!w.id) w.id = Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+      words.push(w);
+    });
+    return {v:1, words, tomb, sessions: Math.max(db.sessions||0, remote.sessions||0)};
+  }
+  function refreshViews(){
+    renderVocab(); renderStartInfo();
+    if(!$('tab-stats').classList.contains('hidden')) renderStats();
+  }
+  function schedulePush(){
+    if(!syncInit || !syncOn()) return;
+    clearTimeout(pushTimer); pushTimer = setTimeout(syncNow, 2500);
+  }
+  async function createGist(){
+    const g = await gh('/gists', {method:'POST', body: JSON.stringify({
+      description:'Dữ liệu app Luyện viết chữ Hán (tự động đồng bộ)', public:false,
+      files:{[GIST_FILE]:{content: JSON.stringify(payload())}} })});
+    syncCfg.gistId = g.id; saveSyncCfg();
+  }
+  async function syncNow(){
+    if(!syncOn()) return;
+    if(!navigator.onLine){ setBadge('☁️ offline'); return; }
+    if(syncBusy){ syncPending = true; return; }
+    syncBusy = true; setBadge('☁️ đang đồng bộ…');
+    try{
+      let g;
+      try{ g = await gh('/gists/'+syncCfg.gistId); }
+      catch(e){ if(e.status===404){ await createGist(); g = await gh('/gists/'+syncCfg.gistId); } else throw e; }
+      const f = g.files && g.files[GIST_FILE];
+      let remote = {words:[], tomb:{}, sessions:0}, remoteText = '';
+      if(f){
+        remoteText = f.content || '';
+        if(f.truncated && f.raw_url) remoteText = await (await fetch(f.raw_url, {cache:'no-store'})).text();
+        try{ remote = JSON.parse(remoteText) || remote; }catch(e){}
+      }
+      const merged = mergeData(remote);
+      const localBefore = JSON.stringify({w:db.words, t:db.tomb, s:db.sessions||0});
+      const localAfter = JSON.stringify({w:merged.words, t:merged.tomb, s:merged.sessions});
+      if(localBefore !== localAfter){
+        db.words = merged.words; db.tomb = merged.tomb; db.sessions = merged.sessions;
+        if(cur){ const nw = db.words.find(w=>w.hanzi===cur.hanzi); if(nw) cur = nw; }
+        saveLocal(); refreshViews();
+      }
+      const out = JSON.stringify(merged);
+      if(out !== remoteText){
+        await gh('/gists/'+syncCfg.gistId, {method:'PATCH', body: JSON.stringify({files:{[GIST_FILE]:{content: out}}})});
+      }
+      syncCfg.last = Date.now(); saveSyncCfg();
+      setBadge('☁️ '+hhmm(syncCfg.last)); $('syncMsg').textContent='';
+    }catch(e){
+      if(e.status===401){ setBadge('☁️ lỗi token'); $('syncMsg').textContent='Token không hợp lệ hoặc đã hết hạn. Hãy ngắt kết nối và dán token mới.'; }
+      else if(e.status===403){ setBadge('☁️ lỗi'); $('syncMsg').textContent='Token thiếu quyền "gist" hoặc GitHub tạm giới hạn truy cập.'; }
+      else { setBadge('☁️ chưa đồng bộ'); $('syncMsg').textContent='Chưa đồng bộ được (mạng yếu?). App sẽ thử lại sau.'; }
+    }finally{
+      syncBusy = false; renderSyncUI();
+      if(syncPending){ syncPending = false; setTimeout(syncNow, 500); }
+    }
+  }
+  $('syncConnect').addEventListener('click', async ()=>{
+    const tok = $('tokIn').value.trim();
+    if(!tok){ toast('Hãy dán GitHub token'); return; }
+    const btn = $('syncConnect'); btn.disabled = true; $('syncMsg').textContent = 'Đang kết nối…';
+    syncCfg = {token: tok};
+    try{
+      const u = await gh('/user'); syncCfg.login = u.login;
+      let found = null;
+      for(let page=1; page<=5 && !found; page++){
+        const list = await gh('/gists?per_page=100&page='+page);
+        found = list.find(g=>g.files && g.files[GIST_FILE]);
+        if(list.length < 100) break;
+      }
+      if(found){ syncCfg.gistId = found.id; saveSyncCfg(); }
+      else { await createGist(); }
+      $('tokIn').value = ''; $('syncMsg').textContent = found ? 'Đã tìm thấy dữ liệu cũ, đang gộp…' : 'Đã tạo kho dữ liệu mới.';
+      renderSyncUI(); await syncNow();
+      toast('Đã bật đồng bộ');
+    }catch(e){
+      syncCfg = {}; saveSyncCfg(); renderSyncUI();
+      $('syncMsg').textContent = e.status===401 ? 'Token không đúng. Kiểm tra lại rồi dán lại.' :
+        (e.status===403||e.status===404) ? 'Token cần được cấp quyền "gist".' : 'Không kết nối được. Kiểm tra mạng rồi thử lại.';
+    }finally{ btn.disabled = false; }
+  });
+  $('syncNowBtn').addEventListener('click', syncNow);
+  $('syncOffBtn').addEventListener('click', ()=>askConfirm('Ngắt đồng bộ trên thiết bị này? Dữ liệu trên máy và trên GitHub vẫn được giữ.', ()=>{
+    syncCfg = {}; saveSyncCfg(); $('syncMsg').textContent=''; renderSyncUI();
+  }));
+  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') syncNow(); });
+  window.addEventListener('online', syncNow);
+  window.addEventListener('offline', ()=>{ if(syncOn()) setBadge('☁️ offline'); });
+  setInterval(()=>{ if(document.visibilityState==='visible') syncNow(); }, 90000);
+  syncInit = true;
+  renderSyncUI();
+  if(syncOn()) setTimeout(syncNow, 800);
   renderStartInfo();
   renderVocab();
 })();
