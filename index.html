@@ -77,6 +77,10 @@
   .vlist .info{flex:1;min-width:0}
   .vlist .info .p{color:var(--blue);font-size:.9rem}
   .vlist .info .m{font-size:.95rem;overflow-wrap:anywhere}
+  .pos{display:inline-block;font-size:.72rem;font-weight:700;color:#7c2d12;background:#ffedd5;border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:middle}
+  .tag{display:inline-block;font-size:.7rem;font-weight:700;color:#1e40af;background:#dbeafe;border-radius:6px;padding:1px 6px;margin-left:4px;vertical-align:middle}
+  .qpos{margin-top:2px}
+  .qpos .pos{margin:0;font-size:.82rem}
 
   /* Stats */
   .stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
@@ -120,6 +124,15 @@
         <option value="list">Theo thứ tự danh sách</option>
       </select>
       <div style="height:10px"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label for="deckSel">Bộ từ</label>
+          <select id="deckSel"><option value="all">Tất cả</option><option value="HSK1">HSK 1</option><option value="mine">Từ tự thêm</option></select></div>
+        <div><label for="posSel">Từ loại</label><select id="posSel"></select></div>
+      </div>
+      <div style="height:10px"></div>
+      <label for="sizeSel">Số từ mỗi phiên</label>
+      <select id="sizeSel"><option value="10">10 từ</option><option value="20">20 từ</option><option value="30">30 từ</option><option value="50">50 từ</option><option value="0">Tất cả</option></select>
+      <div style="height:10px"></div>
       <label for="strictSel">Độ khắt khe khi chấm nét</label>
       <select id="strictSel">
         <option value="1.3">Dễ</option>
@@ -139,6 +152,7 @@
       </div>
       <div class="prompt">
         <div class="meaning" id="qMeaning"></div>
+        <div class="qpos" id="qPos"></div>
         <div class="pinyin" id="qPinyin"></div>
         <div class="slots hz" id="qSlots"></div>
       </div>
@@ -169,6 +183,7 @@
       <div class="big hz" id="rHanzi"></div>
       <div class="pinyin" id="rPinyin"></div>
       <div style="font-weight:600;margin:4px 0 10px" id="rMeaning"></div>
+      <div id="rPos" style="margin:-4px 0 8px"></div>
       <p class="muted" id="rDetail"></p>
       <div class="row">
         <button class="btn" id="rReplay">🎞️ Xem lại cách viết</button>
@@ -194,21 +209,29 @@
       <div style="display:grid;gap:8px">
         <div><label for="inHanzi">Chữ Hán</label><input id="inHanzi" class="hz" placeholder="vd: 学生" autocomplete="off"></div>
         <div><label for="inPinyin">Pinyin</label><input id="inPinyin" placeholder="vd: xuésheng" autocomplete="off"></div>
+        <div><label for="inPos">Từ loại</label><input id="inPos" list="posList" placeholder="vd: Danh từ" autocomplete="off">
+          <datalist id="posList"></datalist></div>
         <div><label for="inMeaning">Nghĩa tiếng Việt</label><input id="inMeaning" placeholder="vd: học sinh" autocomplete="off"></div>
         <button class="btn primary" id="addBtn">+ Thêm từ</button>
       </div>
     </div>
     <div class="card">
       <h2>Nhập nhiều từ cùng lúc</h2>
-      <p class="muted" style="margin-top:0">Mỗi dòng một từ, định dạng: <b>Chữ Hán - Pinyin - Nghĩa tiếng Việt</b></p>
-      <textarea id="bulkIn" placeholder="老师 - lǎoshī - giáo viên&#10;喝 - hē - uống"></textarea>
+      <p class="muted" style="margin-top:0">Mỗi dòng một từ, định dạng: <b>Chữ Hán - Pinyin - Từ loại - Nghĩa</b> (có thể bỏ trống từ loại: <b>Chữ Hán - Pinyin - Nghĩa</b>)</p>
+      <textarea id="bulkIn" placeholder="老师 - lǎoshī - Danh từ - giáo viên&#10;喝 - hē - Động từ - uống"></textarea>
       <div style="height:8px"></div>
       <button class="btn" id="bulkBtn" style="width:100%">Nhập danh sách</button>
+    </div>
+    <div class="card">
+      <h2>📚 Bộ từ có sẵn</h2>
+      <p class="muted" style="margin-top:0">HSK 1 (HSK 3.0): 298 từ, kèm pinyin, từ loại và nghĩa tiếng Việt. Từ đã có sẽ được giữ nguyên và chỉ bổ sung từ loại còn thiếu.</p>
+      <button class="btn primary" id="hsk1Btn" style="width:100%">Nạp bộ HSK 1</button>
     </div>
     <div class="card">
       <div class="row" style="margin-bottom:6px">
         <h2 style="margin:0">Danh sách của tôi (<span id="vCount">0</span>)</h2>
       </div>
+      <input id="vSearch" type="search" placeholder="Tìm chữ Hán, pinyin, nghĩa, từ loại…" autocomplete="off" style="margin:4px 0 6px">
       <ul class="vlist" id="vList"></ul>
       <div class="row" style="margin-top:12px">
         <button class="btn small" id="seedBtn">Thêm lại 5 từ mẫu</button>
@@ -300,12 +323,14 @@
 (function(){
   'use strict';
   const LS_KEY = 'hanzi-trainer-v1';
+  const HSK1 = [["爱","ài","Động từ","Yêu"],["吧","ba","Trợ từ","Nhé, đi; chắc hẳn, chứ (suy đoán)"],["八","bā","Số từ","Số 8"],["爸爸","bàba","Danh từ","Bố, ba"],["百","bǎi","Số từ","Trăm, một trăm"],["白天","báitiān","Danh từ","Ban ngày"],["半","bàn","Số từ","Một nửa, rưỡi"],["包子","bāozi","Danh từ","Bánh bao"],["北京","Běijīng","Danh từ","Bắc Kinh"],["杯子","bēizi","Danh từ","Cái cốc"],["本","běn","Lượng từ","Cuốn, quyển"],["边","biān","Danh từ/Hậu tố","Ven, bờ, lề; bên, đằng, phía"],["病","bìng","Danh từ/Động từ","Bệnh, bệnh tật; Bị ốm, bị bệnh"],["不","bù","Phó từ","Không"],["不客气","bú kèqi","Trợ từ","Đừng khách khí, đừng ngại"],["不要","búyào","Phó từ","Không, đừng"],["菜","cài","Danh từ","Món ăn, thức ăn"],["茶","chá","Danh từ","Trà"],["唱","chàng","Động từ","Hát"],["超市","chāoshì","Danh từ","Siêu thị"],["车","chē","Danh từ","Xe"],["吃","chī","Động từ","Ăn"],["穿","chuān","Động từ","Mặc, mang, đeo"],["出租车","chūzūchē","Danh từ","Xe taxi"],["大","dà","Tính từ","To, lớn"],["打电话","dǎ diànhuà","Động từ","Gọi điện thoại"],["大家","dàjiā","Đại từ","Mọi người, cả nhà"],["到","dào","Động từ","Đi, đến, đi đến"],["大学","dàxué","Danh từ","Đại học"],["大学生","dàxuéshēng","Danh từ","Sinh viên, sinh viên đại học"],["的","de","Trợ từ","Của"],["第","dì","Tiền tố","Thứ, thứ tự, thứ hạng"],["店","diàn","Danh từ","Tiệm, cửa hàng, cửa hiệu"],["点","diǎn","Danh từ","Giờ"],["电话","diànhuà","Danh từ","Điện thoại"],["电脑","diànnǎo","Danh từ","Máy tính"],["电视","diànshì","Danh từ","Ti vi"],["电影","diànyǐng","Danh từ","Phim điện ảnh"],["电影院","diànyǐngyuàn","Danh từ","Rạp chiếu phim"],["弟弟","dìdi","Danh từ","Em trai"],["东西","dōngxi","Danh từ","Đồ vật"],["都","dōu","Phó từ","Đều"],["读","dú","Động từ","Đọc"],["对","duì","Tính từ/Giới từ","(tính từ) đúng, chính xác; (giới từ) về, với, đối với"],["对不起","duìbuqǐ","Động từ","Xin lỗi"],["多","duō","Tính từ","Nhiều"],["多少","duōshao","Đại từ","Bao nhiêu"],["读书","dúshū","Động từ","Đọc sách, học bài, đi học"],["二","èr","Số từ","Số 2"],["儿子","érzi","Danh từ","Con trai"],["饭","fàn","Danh từ","Cơm"],["饭店","fàndiàn","Danh từ","Nhà hàng, quán ăn"],["房间","fángjiān","Danh từ","Phòng, căn phòng"],["非常","fēicháng","Phó từ","Rất, vô cùng, cực kỳ"],["飞机","fēijī","Danh từ","Máy bay"],["分","fēn","Lượng từ","Phút (thời gian), xu (đơn vị tiền tệ)"],["分钟","fēnzhōng","Lượng từ","Phút"],["高兴","gāoxìng","Tính từ/Động từ","Vui vẻ, hào hứng"],["个","gè","Lượng từ","Cái"],["歌","gē","Danh từ","Bài hát"],["哥哥","gēge","Danh từ","Anh trai"],["给","gěi","Động từ","Cho, đưa cho, trao cho"],["公司","gōngsī","Danh từ","Công ty"],["工作","gōngzuò","Danh từ/Động từ","Công việc, Làm việc"],["狗","gǒu","Danh từ","Con chó"],["贵","guì","Tính từ","Đắt"],["国","guó","Danh từ","Nước, quốc gia"],["还","hái","Phó từ","Vẫn, còn"],["孩子","háizi","Danh từ","Trẻ em, bọn trẻ, đứa bé, con cái"],["汉语","Hànyǔ","Danh từ","Tiếng Trung"],["汉字","Hànzì","Danh từ","Chữ Hán, Hán tự"],["号","hào","Danh từ","Ngày"],["好","hǎo","Tính từ","Tốt, ổn, khỏe, được"],["好吃","hǎochī","Tính từ","Ngon, ngon miệng"],["好看","hǎokàn","Tính từ","Đẹp, xinh; hay, thú vị"],["好听","hǎotīng","Tính từ","Hay, dễ nghe (âm thanh)"],["好玩儿","hǎowánr","Tính từ","Hay, thú vị, thích thú"],["和","hé","Liên từ","Và"],["喝","hē","Động từ","Uống"],["很","hěn","Phó từ","Rất"],["后","hòu","Danh từ","Sau, phía sau"],["后面","hòumiàn","Danh từ","Phía sau"],["回","huí","Động từ","Quay lại, trở về"],["会","huì","Trợ động từ","Sẽ"],["火车","huǒchē","Danh từ","Xe lửa, tàu hỏa"],["几","jǐ","Số từ","Mấy, vài"],["家","jiā","Danh từ","Nhà, Gia đình"],["见","jiàn","Động từ","Thấy, trông thấy, nhìn thấy"],["件","jiàn","Lượng từ","Chiếc, kiện, cái, bộ"],["叫","jiào","Động từ","Gọi"],["饺子","jiǎozi","Danh từ","Bánh chẻo, sủi cảo, há cảo"],["家人","jiārén","Danh từ","Gia đình, người nhà, thành viên trong gia đình"],["鸡蛋","jīdàn","Danh từ","Trứng gà"],["今天","jīntiān","Danh từ","Hôm nay"],["九","jiǔ","Số từ","Số 9"],["觉得","juéde","Động từ","Thấy, cảm thấy, thấy rằng, cho rằng, nghĩ rằng"],["开","kāi","Động từ","Mở"],["开车","kāichē","Động từ","Lái xe, chạy xe, điều khiển xe"],["看","kàn","Động từ","Xem, Nhìn"],["看见","kàn jiàn","Động từ","Nhìn thấy"],["看病","kànbìng","Động từ","Khám bệnh, đi khám bệnh"],["课","kè","Danh từ","Giờ học, giờ lên lớp; tiết học"],["可以","kěyǐ","Động từ/Tính từ","Có thể; Tốt, được, ổn"],["口","kǒu","Danh từ/Lượng từ","(Danh) Miệng; (Lượng) Nhân khẩu (dùng cho thành viên gia đình)"],["块","kuài","Lượng từ","Đồng (tiền); Miếng"],["来","lái","Động từ","Đến, tới"],["老师","lǎoshī","Danh từ","Giáo viên, thầy cô"],["了","le","Trợ từ","Đã, rồi (biểu thị sự hoàn thành của hành động)"],["冷","lěng","Tính từ","Lạnh"],["里","li","Danh từ","Phía trong, bên trong"],["两","liǎng","Số từ","Hai"],["零","líng","Số từ","Số 0"],["六","liù","Số từ","Số 6"],["吗","ma","Trợ từ","Không, ư, à (dùng ở cuối câu để hỏi)"],["卖","mài","Động từ","Bán"],["买","mǎi","Động từ","Mua"],["妈妈","māma","Danh từ","Mẹ, má"],["忙","máng","Tính từ","Bận, bận rộn"],["猫","māo","Danh từ","Con mèo"],["没有","méi(yǒu)","Động từ/Phó từ","(Động) Không có (sở hữu); (Phó) Không, chưa (làm gì)"],["没关系","méi guānxi","Động từ/Phó từ","Không sao"],["妹妹","mèimei","Danh từ","Em gái"],["没事","méishì","Động từ","Ổn, không sao"],["们","men","Hậu tố","Chúng, các, bọn (chỉ số nhiều)"],["面包","miànbāo","Danh từ","Bánh mì"],["面条儿","miàntiáor","Danh từ","Mì, mì sợi"],["米饭","mǐfàn","Danh từ","Cơm"],["明年","míngnián","Danh từ","Năm sau"],["明天","míngtiān","Danh từ","Ngày mai"],["名字","míngzi","Danh từ","Tên"],["那","nà","Đại từ","Đó, kia"],["哪","nǎ","Đại từ","Nào (dùng trong câu hỏi)"],["那边","nàbiān","Đại từ","Đằng kia, bên đó"],["那个","nàge","Đại từ","Cái kia, cái đó"],["哪个","nǎge","Đại từ","Cái nào (dùng trong câu hỏi)"],["那里","nàlǐ","Đại từ","Chỗ đó, nơi đó, nơi ấy, chỗ kia"],["哪里","nǎlǐ","Đại từ","Chỗ nào, nơi nào, đâu"],["男","nán","Tính từ","Nam (giới tính)"],["男朋友","nánpéngyou","Danh từ","Bạn trai"],["那儿","nàr","Đại từ","Chỗ đó, nơi đó, nơi ấy, chỗ kia"],["哪儿","nǎr","Đại từ","Chỗ nào, nơi nào, đâu"],["那些","nàxiē","Đại từ","Những... ấy; những... đó; những... kia (Biểu thị số lượng không xác định)"],["哪些","nǎxiē","Đại từ","Những cái nào, người nào (dùng trong câu hỏi)"],["呢","ne","Trợ từ","Nhé, nhỉ, cơ, đó, đấy … thì sao? (hỏi rút gọn); Đâu, ở đâu? (hỏi vị trí)"],["能","néng","Trợ động từ","Có thể"],["你","nǐ","Đại từ","Bạn, cậu, anh, chị (đối phương)"],["你好","nǐ hǎo","Động từ","Xin chào"],["年","nián","Danh từ","Năm"],["你们","nǐmen","Đại từ","Các bạn, các anh, các chị,..."],["您","nín","Đại từ","Ngài, ông, bà (kính trọng, lịch sự)"],["牛奶","niúnǎi","Danh từ","Sữa bò"],["女","nǚ","Tính từ","Nữ (giới tính)"],["女儿","nǚér","Danh từ","Con gái"],["女朋友","nǚpéngyou","Danh từ","Bạn gái"],["女士","nǚshì","Danh từ","Quý bà, quý cô (tôn trọng, lịch sự)"],["朋友","péngyou","Danh từ","Bạn, bạn bè"],["便宜","piányi","Tính từ","Rẻ"],["漂亮","piàoliang","Tính từ","Xinh đẹp"],["苹果","píngguǒ","Danh từ","Quả táo"],["七","qī","Số từ","Số 7"],["钱","qián","Danh từ","Tiền"],["前","qián","Danh từ","Trước, phía trước; Trước khi (làm gì); trước (mấy giờ)"],["前面","qiánmiàn","Danh từ","Phía trước"],["起床","qǐchuáng","Động từ","Thức dậy"],["请","qǐng","Động từ","Xin, xin hãy, mời (yêu cầu lịch sự)"],["请问","qǐngwèn","Động từ","Xin hỏi, cho hỏi"],["去","qù","Động từ","Đi"],["去年","qùnián","Danh từ","Năm ngoái"],["热","rè","Tính từ","Nóng"],["人","rén","Danh từ","Người"],["认识","rènshi","Động từ","Quen, biết"],["三","sān","Số từ","Số 3"],["上","shang","Danh từ/Động từ","(Danh) Trên, phía trên; (Động) Lên, đi lên"],["上班","shàngbān","Động từ","Đi làm"],["商店","shāngdiàn","Danh từ","Cửa hàng, tiệm"],["上课","shàngkè","Động từ","Lên lớp, vào học, đi học"],["上午","shàngwǔ","Danh từ","Buổi sáng"],["上学","shàngxué","Động từ","Đi học"],["少","shǎo","Động từ/Tính từ","(Tính từ) Ít; (Động từ) Thiếu"],["谁","shéi","Đại từ","Ai"],["生病","shēngbìng","Động từ","Bị ốm, bị bệnh"],["什么","shénme","Đại từ","Cái gì?"],["十","shí","Số từ","Số 10"],["是","shì","Động từ","Là"],["事","shì","Danh từ","Việc, sự việc, chuyện"],["时候","shíhou","Danh từ","Lúc, khi"],["时间","shíjiān","Danh từ","Thời gian"],["手机","shǒujī","Danh từ","Điện thoại di động"],["书","shū","Danh từ","Sách"],["书店","shūdiàn","Danh từ","Nhà sách, hiệu sách"],["睡","shuì","Động từ","Ngủ"],["水","shuǐ","Danh từ","Nước"],["水果","shuǐguǒ","Danh từ","Hoa quả"],["睡觉","shuìjiào","Động từ","Ngủ"],["说","shuō","Động từ","Nói"],["四","sì","Số từ","Số 4"],["岁","suì","Lượng từ","Tuổi"],["他","tā","Đại từ","Cậu ấy, anh ấy, ông ấy,..."],["她","tā","Đại từ","Cô ấy, chị ấy, bà ấy,..."],["它","tā","Đại từ","Nó (chỉ sự vật, con vật)"],["太","tài","Phó từ","Quá, lắm"],["他们","tāmen","Đại từ","Họ, bọn họ"],["它们","tāmen","Đại từ","Chúng, chúng nó"],["她们","tāmen","Đại từ","Họ, các chị ấy, các cô ấy,... (dùng cho nữ giới)"],["天","tiān","Danh từ/Lượng từ","(Danh từ) Trời, bầu trời; (Lượng từ) Ngày"],["天气","tiānqì","Danh từ","Thời tiết"],["听","tīng","Động từ","Nghe"],["听见","tīngjiàn","Động từ","Nghe thấy"],["同学","tóngxué","Danh từ","Bạn học"],["外","wài","Danh từ","Bên ngoài"],["外边","wàibian","Danh từ","Ngoài, bên ngoài, mặt ngoài"],["玩","wán","Động từ","Chơi, chơi đùa"],["晚","wǎn","Tính từ","Muộn"],["晚饭","wǎnfàn","Danh từ","Cơm tối, bữa tối"],["晚上","wǎnshang","Danh từ","Buổi tối"],["喂","wèi","Thán từ","Alo, Này"],["问","wèn","Động từ","Hỏi"],["问题","wèntí","Danh từ","Vấn đề, câu hỏi"],["我","wǒ","Đại từ","Tôi"],["我们","wǒmen","Đại từ","Chúng tôi, chúng ta"],["五","wǔ","Số từ","Số 5"],["午饭","wǔfàn","Danh từ","Bữa trưa, cơm trưa"],["下","xià","Danh từ/Động từ","(Danh từ): bên dưới, phía dưới; (Động từ): xuống, hạ"],["下雨","xià yǔ","Động từ","Mưa"],["下班","xiàbān","Động từ","Tan ca, tan làm, hết giờ làm"],["下课","xiàkè","Động từ","Tan học, hết giờ học"],["想","xiǎng","Động từ","Muốn, nhớ, nghĩ"],["先生","xiānsheng","Danh từ","Ông, ngài"],["现在","xiànzài","Danh từ","Hiện tại, bây giờ, hiện nay"],["小","xiǎo","Tính từ","Bé, nhỏ"],["小姐","xiǎojiě","Danh từ","Quý cô, Tiểu thư"],["小朋友","xiǎopéngyǒu","Danh từ","Trẻ em, bạn nhỏ"],["小时","xiǎoshí","Danh từ","Tiếng/giờ (đồng hồ)"],["小学","xiǎoxué","Danh từ","Tiểu học, bậc tiểu học"],["小学生","xiǎoxuéshēng","Danh từ","Học sinh tiểu học"],["下午","xiàwǔ","Danh từ","Buổi chiều"],["写","xiě","Động từ","Viết"],["些","xiē","Lượng từ","Một ít, vài"],["谢谢","xièxie","Động từ","Cảm ơn"],["喜欢","xǐhuan","Động từ","Thích"],["新","xīn","Tính từ","Mới"],["星期","xīngqī","Danh từ","Thứ, Tuần"],["星期日","xīngqīrì","Danh từ","Chủ nhật"],["星期天","xīngqītiān","Danh từ","Chủ nhật"],["休息","xiūxi","Động từ","Nghỉ ngơi"],["学","xué","Động từ","Học"],["雪","xuě","Danh từ","Tuyết"],["学生","xuéshēng","Danh từ","Học sinh"],["学习","xuéxí","Động từ","Học tập"],["学校","xuéxiào","Danh từ","Trường học"],["要","yào","Động từ","Muốn, cần, phải"],["也","yě","Phó từ","Cũng"],["一","yī","Số từ","Số 1"],["一半","yíbàn","Số từ","Một nửa"],["一点儿","yìdiǎnr","Số lượng từ","Một ít, một chút"],["衣服","yīfu","Danh từ","Quần áo"],["医生","yīshēng","Danh từ","Bác sĩ"],["一下","yíxià","Số lượng từ","Một tý, một lúc, thử xem, một cái"],["一些","yìxiē","Số lượng từ","Một vài, một số, một phần (chỉ số lượng không xác định)"],["医院","yīyuàn","Danh từ","Bệnh viện"],["椅子","yǐzi","Danh từ","Cái ghế"],["有","yǒu","Động từ","Có"],["有一点儿","yǒu(yì)diǎnr","Phó từ","Hơi, một chút"],["有的","yǒude","Đại từ","Có cái, có những"],["有些","yǒuxiē","Đại từ","Một chút, một vài, một số"],["雨","yǔ","Danh từ","Mưa"],["元","yuán","Lượng từ","(đơn vị tiền tệ) đồng"],["月","yuè","Danh từ","Tháng"],["在","zài","Động từ/Giới từ/Phó từ","(Động từ) sinh sống, tồn tại; (Giới từ) đang, ở, vào; (Phó từ): đang"],["再","zài","Phó từ","Lại, lần nữa, hãy, sẽ, hẵng"],["再见","zàijiàn","Động từ","Tạm biệt, hẹn gặp lại"],["早饭","zǎofàn","Danh từ","Bữa sáng"],["早上","zǎoshang","Danh từ","Buổi sáng sớm"],["怎么","zěnme","Đại từ","Sao, làm sao, thế nào (tính chất, tình hình, phương thức, nguyên nhân,...)"],["怎么样","zěnmeyàng","Đại từ","Thế nào, như thế nào (chỉ tính chất, tình trạng, cách thức...)"],["找","zhǎo","Động từ","Tìm"],["这","zhè","Đại từ","Đây, này"],["这边","zhèbiān","Đại từ","Ở đây, bên này, chỗ này, phía này (cách người nói ở khoảng cách khá gần)"],["这个","zhège","Đại từ","Cái này, vật này, việc này"],["这里","zhèlǐ","Đại từ","Ở đây, nơi này, nơi đây, tại đây"],["真","zhēn","Phó từ","Thật, quả là"],["正在","zhèngzài","Phó từ","Đang"],["这儿","zhèr","Đại từ","Chỗ này, ở đây"],["这些","zhèxiē","Đại từ","Những thứ này, những điều này"],["只","zhī","Lượng từ","(được dùng cho động vật) con"],["知道","zhīdào","Động từ","Biết"],["中国","Zhōngguó","Danh từ","Trung Quốc"],["中文","Zhōngwén","Danh từ","Tiếng Trung Quốc"],["中午","zhōngwǔ","Danh từ","Buổi trưa"],["中学","zhōngxué","Danh từ","Trung học"],["中学生","zhōngxuéshēng","Danh từ","Học sinh trung học"],["住","zhù","Động từ","Ở tại, sống tại"],["桌子","zhuōzi","Danh từ","Cái bàn"],["字","zì","Danh từ","Chữ"],["坐","zuò","Động từ","Ngồi"],["做","zuò","Động từ","Làm"],["做饭","zuòfàn","Động từ","Nấu cơm, nấu ăn"],["昨天","zuótiān","Danh từ","Hôm qua"]];
+  const POS_BASE = ['Danh từ','Động từ','Tính từ','Đại từ','Phó từ','Số từ','Lượng từ','Số lượng từ','Trợ từ','Trợ động từ','Giới từ','Liên từ','Thán từ','Tiền tố','Hậu tố','Cụm từ'];
   const SAMPLE = [
-    {hanzi:'你好', pinyin:'nǐ hǎo', meaning:'xin chào'},
-    {hanzi:'谢谢', pinyin:'xièxie', meaning:'cảm ơn'},
-    {hanzi:'学习', pinyin:'xuéxí', meaning:'học tập'},
-    {hanzi:'朋友', pinyin:'péngyou', meaning:'bạn bè'},
-    {hanzi:'水',   pinyin:'shuǐ',   meaning:'nước'}
+    {hanzi:'你好', pinyin:'nǐ hǎo', pos:'Động từ', meaning:'xin chào'},
+    {hanzi:'谢谢', pinyin:'xièxie', pos:'Động từ', meaning:'cảm ơn'},
+    {hanzi:'学习', pinyin:'xuéxí', pos:'Động từ', meaning:'học tập'},
+    {hanzi:'朋友', pinyin:'péngyou', pos:'Danh từ', meaning:'bạn bè'},
+    {hanzi:'水',   pinyin:'shuǐ',   pos:'Danh từ', meaning:'nước'}
   ];
   const HAN_RE = /[㐀-䶿一-鿿豈-﫿]/g;
   const $ = id => document.getElementById(id);
@@ -313,7 +338,7 @@
   // ---------- Storage ----------
   function newWord(w){
     return {id: Date.now().toString(36)+Math.random().toString(36).slice(2,7),
-      hanzi:w.hanzi, pinyin:w.pinyin||'', meaning:w.meaning||'',
+      hanzi:w.hanzi, pinyin:w.pinyin||'', pos:w.pos||'', tag:w.tag||'', meaning:w.meaning||'',
       correct:0, wrong:0, strokesOk:0, strokesBad:0, last:null, u:Date.now()};
   }
   function load(){
@@ -324,7 +349,7 @@
     return {words: SAMPLE.map(newWord), settings:{showPinyin:false, order:'random', strict:'1'}, sessions:0};
   }
   let db = load();
-  db.settings = Object.assign({showPinyin:false, order:'random', strict:'1'}, db.settings||{});
+  db.settings = Object.assign({showPinyin:false, order:'random', strict:'1', deck:'all', pos:'all', size:'20'}, db.settings||{});
   db.tomb = db.tomb || {};
   function touch(w){ if(w) w.u = Date.now(); }
   function saveLocal(){
@@ -384,39 +409,41 @@
   });
 
   // ---------- Vocabulary ----------
-  function addWord(hanzi, pinyin, meaning, silent){
+  function addWord(hanzi, pinyin, meaning, silent, pos, tag){
     const h = (hanzi.match(HAN_RE)||[]).join('');
     if(!h){ if(!silent) toast('Hãy nhập ít nhất một chữ Hán'); return false; }
     if(!meaning.trim()){ if(!silent) toast('Hãy nhập nghĩa tiếng Việt'); return false; }
     if(db.words.some(w=>w.hanzi===h)){ if(!silent) toast('"'+h+'" đã có trong danh sách'); return false; }
-    db.words.push(newWord({hanzi:h, pinyin:pinyin.trim(), meaning:meaning.trim()}));
+    db.words.push(newWord({hanzi:h, pinyin:pinyin.trim(), meaning:meaning.trim(), pos:(pos||'').trim(), tag:tag||''}));
     delete db.tomb[h];
     return true;
   }
   $('addBtn').addEventListener('click', ()=>{
-    if(addWord($('inHanzi').value, $('inPinyin').value, $('inMeaning').value)){
+    if(addWord($('inHanzi').value, $('inPinyin').value, $('inMeaning').value, false, $('inPos').value)){
       save(); renderVocab(); toast('Đã thêm từ');
       if(typeof HanziWriter!=='undefined') prefetchChars(Array.from(db.words[db.words.length-1].hanzi));
-      $('inHanzi').value=$('inPinyin').value=$('inMeaning').value=''; $('inHanzi').focus();
+      $('inHanzi').value=$('inPinyin').value=$('inMeaning').value=$('inPos').value=''; $('inHanzi').focus();
     }
   });
-  ['inHanzi','inPinyin','inMeaning'].forEach(id=>$(id).addEventListener('keydown',e=>{ if(e.key==='Enter') $('addBtn').click(); }));
+  ['inHanzi','inPinyin','inPos','inMeaning'].forEach(id=>$(id).addEventListener('keydown',e=>{ if(e.key==='Enter') $('addBtn').click(); }));
   $('bulkBtn').addEventListener('click', ()=>{
     const lines = $('bulkIn').value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
     let ok=0, skip=0;
     lines.forEach(l=>{
       const p = l.split(/\s*[-–—|\t]\s*/);
       if(p.length<2){ skip++; return; }
-      const meaning = p.length>=3 ? p.slice(2).join(' - ') : p[1];
-      const pinyin = p.length>=3 ? p[1] : '';
-      addWord(p[0], pinyin, meaning, true) ? ok++ : skip++;
+      let pinyin='', pos='', meaning;
+      if(p.length>=4 && isPos(p[2])){ pinyin=p[1]; pos=p[2]; meaning=p.slice(3).join(' - '); }
+      else if(p.length>=3){ pinyin=p[1]; meaning=p.slice(2).join(' - '); }
+      else meaning=p[1];
+      addWord(p[0], pinyin, meaning, true, pos) ? ok++ : skip++;
     });
     save(); renderVocab(); prefetchChars(wordChars());
     toast('Đã thêm '+ok+' từ'+(skip?(', bỏ qua '+skip+' dòng'):''));
     if(ok) $('bulkIn').value='';
   });
   $('seedBtn').addEventListener('click', ()=>{
-    let n=0; SAMPLE.forEach(s=>{ if(addWord(s.hanzi,s.pinyin,s.meaning,true)) n++; });
+    let n=0; SAMPLE.forEach(s=>{ if(addWord(s.hanzi,s.pinyin,s.meaning,true,s.pos)) n++; });
     save(); renderVocab(); toast(n?('Đã thêm '+n+' từ mẫu'):'Các từ mẫu đã có sẵn');
   });
   $('clearBtn').addEventListener('click', ()=>{
@@ -428,13 +455,42 @@
     const w = db.words.find(x=>x.id===b.dataset.del); if(!w) return;
     askConfirm('Xóa từ "'+w.hanzi+'"?', ()=>{ db.tomb[w.hanzi]=Date.now(); db.words = db.words.filter(x=>x.id!==w.id); save(); renderVocab(); });
   });
+  function isPos(t){
+    t=(t||'').trim().toLowerCase(); if(!t) return false;
+    return t.split('/').every(x=>POS_BASE.some(b=>b.toLowerCase()===x.trim()) || /^(n|v|adj|adv|pron|num|m|prep|conj|part|int|aux)\.?$/.test(x.trim()));
+  }
+  function posParts(w){ return (w.pos||'').split('/').map(x=>x.trim().toLowerCase()).filter(Boolean); }
+  function fold(t){ return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'d').toLowerCase(); }
   function renderVocab(){
     $('vCount').textContent = db.words.length;
-    $('vList').innerHTML = db.words.length ? db.words.map(w=>
-      '<li><span class="h hz">'+esc(w.hanzi)+'</span><div class="info"><div class="p">'+esc(w.pinyin||'—')+'</div><div class="m">'+esc(w.meaning)+'</div></div>'+
+    const q = fold($('vSearch').value.trim());
+    const W = q ? db.words.filter(w=> w.hanzi.includes($('vSearch').value.trim()) || fold(w.pinyin+' '+w.meaning+' '+(w.pos||'')).includes(q)) : db.words;
+    $('vList').innerHTML = W.length ? W.map(w=>
+      '<li><span class="h hz">'+esc(w.hanzi)+'</span><div class="info"><div class="p">'+esc(w.pinyin||'—')+(w.pos?'<span class="pos">'+esc(w.pos)+'</span>':'')+(w.tag?'<span class="tag">'+esc(w.tag)+'</span>':'')+'</div><div class="m">'+esc(w.meaning)+'</div></div>'+
       '<span class="muted" title="đúng / sai">'+w.correct+'✓ '+w.wrong+'✗</span>'+
       '<button class="btn small danger" data-del="'+w.id+'" aria-label="Xóa">✕</button></li>'
-    ).join('') : '<li class="muted">Danh sách đang trống. Hãy thêm từ ở trên.</li>';
+    ).join('') : '<li class="muted">'+(q?'Không tìm thấy từ phù hợp.':'Danh sách đang trống. Hãy thêm từ ở trên.')+'</li>';
+    renderPosOptions();
+  }
+  $('vSearch').addEventListener('input', renderVocab);
+  $('hsk1Btn').addEventListener('click', ()=>{
+    let added=0, upd=0;
+    HSK1.forEach(([h,py,pos,vi])=>{
+      const ex = db.words.find(w=>w.hanzi===h);
+      if(ex){ let ch=false; if(!ex.pos){ex.pos=pos; ch=true;} if(!ex.tag){ex.tag='HSK1'; ch=true;} if(!ex.pinyin){ex.pinyin=py; ch=true;} if(ch){touch(ex); upd++;} }
+      else if(addWord(h,py,vi,true,pos,'HSK1')) added++;
+    });
+    save(); renderVocab(); renderStartInfo();
+    toast(added||upd ? ('Đã nạp '+added+' từ HSK 1'+(upd?(', cập nhật '+upd+' từ'):'')) : 'Bộ HSK 1 đã có đủ');
+  });
+  function renderPosOptions(){
+    const set = new Set(POS_BASE);
+    db.words.forEach(w=>posParts(w).forEach(x=>{ if(!POS_BASE.some(b=>b.toLowerCase()===x)) set.add(x[0].toUpperCase()+x.slice(1)); }));
+    $('posList').innerHTML = POS_BASE.map(x=>'<option value="'+esc(x)+'">').join('');
+    const used = [...set].filter(x=>db.words.some(w=>posParts(w).includes(x.toLowerCase())));
+    const curv = db.settings.pos;
+    $('posSel').innerHTML = '<option value="all">Tất cả</option>' + used.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
+    $('posSel').value = used.includes(curv) ? curv : 'all';
   }
 
   // ---------- Stats ----------
@@ -465,11 +521,20 @@
   let wordMistakes=0, hintsUsed=0, gaveUp=false, curStroke=0, autoHinted=false;
   let sessOk=0, sessBad=0, sessWeak=[];
 
+  function filteredWords(){
+    const d=db.settings.deck, p=(db.settings.pos||'all').toLowerCase();
+    return db.words.filter(w=> (d==='all' || (d==='mine' ? !w.tag : w.tag===d)) && (p==='all' || posParts(w).includes(p)));
+  }
   function renderStartInfo(){
-    $('startInfo').textContent = db.words.length ? ('Có '+db.words.length+' từ trong danh sách.') : 'Danh sách đang trống. Hãy thêm từ ở tab "Từ vựng".';
+    renderPosOptions();
+    const n = filteredWords().length, size = parseInt(db.settings.size)||0;
+    $('startInfo').textContent = !db.words.length ? 'Danh sách đang trống. Hãy thêm từ ở tab "Từ vựng".' :
+      (n ? ('Có '+n+' từ phù hợp'+(size && n>size ? (', mỗi phiên luyện '+size+' từ.') : '.')) : 'Không có từ nào khớp bộ lọc.');
   }
   $('orderSel').value = db.settings.order;
   $('strictSel').value = db.settings.strict;
+  $('deckSel').value = db.settings.deck; $('sizeSel').value = db.settings.size;
+  [['deckSel','deck'],['posSel','pos'],['sizeSel','size']].forEach(([id,k])=>$(id).addEventListener('change', e=>{ db.settings[k]=e.target.value; saveLocal(); renderStartInfo(); }));
   $('orderSel').addEventListener('change', e=>{ db.settings.order=e.target.value; save(); });
   $('strictSel').addEventListener('change', e=>{ db.settings.strict=e.target.value; save(); });
 
@@ -486,7 +551,8 @@
   function startSession(){
     if(!db.words.length){ toast('Danh sách từ đang trống'); return; }
     if(!libOk()) return;
-    let list = db.words.slice();
+    let list = filteredWords();
+    if(!list.length){ toast('Không có từ nào khớp bộ lọc'); return; }
     if(db.settings.order==='random') shuffle(list);
     else if(db.settings.order==='weak'){
       shuffle(list);
@@ -495,6 +561,8 @@
         return sb-sa;
       });
     }
+    const size = parseInt(db.settings.size)||0;
+    if(size && list.length>size) list = list.slice(0,size);
     queue = list.map(w=>w.id); qi=0; sessOk=0; sessBad=0; sessWeak=[];
     db.sessions=(db.sessions||0)+1; save();
     show('startCard',false); show('summaryCard',false); show('resultCard',false); show('quizCard',true);
@@ -507,6 +575,7 @@
     chars = Array.from(cur.hanzi); ci=0;
     wordMistakes=0; hintsUsed=0; gaveUp=false;
     $('qMeaning').textContent = cur.meaning;
+    $('qPos').innerHTML = cur.pos ? '<span class="pos">'+esc(cur.pos)+'</span>' : '';
     $('progText').textContent = 'Từ '+(qi+1)+' / '+queue.length;
     $('progBar').style.width = (qi/queue.length*100)+'%';
     updatePinyin();
@@ -614,6 +683,7 @@
     $('rHanzi').textContent = cur.hanzi;
     $('rPinyin').textContent = cur.pinyin;
     $('rMeaning').textContent = cur.meaning;
+    $('rPos').innerHTML = cur.pos ? '<span class="pos">'+esc(cur.pos)+'</span>' : '';
     const parts=[];
     if(gaveUp) parts.push('Bạn đã xem đáp án');
     parts.push('Số nét sai: '+wordMistakes);
