@@ -1,0 +1,1513 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Chữ Hán">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#b91c1c">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<title>Luyện viết chữ Hán</title>
+<script async src="https://cdn.jsdelivr.net/npm/hanzi-writer@3/dist/hanzi-writer.min.js"></script>
+<style>
+  :root{
+    --bg:#f6f4ef; --card:#fff; --ink:#1f2937; --muted:#6b7280; --line:#e5e1d8;
+    --accent:#b91c1c; --accent-soft:#fde8e8; --ok:#15803d; --ok-soft:#dcfce7;
+    --bad:#b91c1c; --warn:#d97706; --blue:#2563eb;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif;background:var(--bg);color:var(--ink)}
+  .hz{font-family:"Noto Serif SC","Songti SC","SimSun","KaiTi",serif}
+  header{background:var(--accent);color:#fff;padding:calc(14px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 0 calc(16px + env(safe-area-inset-left))}
+  header h1{margin:0 0 10px;font-size:1.15rem;font-weight:700;letter-spacing:.3px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .sync-badge{font-size:.75rem;font-weight:600;background:rgba(255,255,255,.18);padding:4px 8px;border-radius:999px;white-space:nowrap}
+  .sync-badge:empty{display:none}
+  nav{display:flex;gap:4px}
+  nav{overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  nav::-webkit-scrollbar{display:none}
+  nav button{flex:1 0 auto;border:0;background:transparent;color:#fecaca;padding:10px 10px;font-size:.88rem;font-weight:600;border-radius:10px 10px 0 0;cursor:pointer;white-space:nowrap}
+  .c-ok{color:var(--ok)} .c-bad{color:var(--bad);text-decoration:underline wavy}
+  .tr-prompt{font-size:1.2rem;font-weight:700;margin:6px 0}
+  .tr-prompt.zh{font-size:1.6rem;font-weight:500}
+  .tr-diff{font-size:1.4rem;letter-spacing:2px;margin:2px 0 6px}
+  .tr-ans{background:var(--bg);border-radius:10px;padding:10px;margin-top:10px}
+  .sp-target{font-size:2rem;text-align:center;letter-spacing:3px;margin:6px 0;overflow-wrap:anywhere}
+  details.gp{padding:12px 16px}
+  details.gp summary{font-weight:700;cursor:pointer}
+  .gid{font-size:.72rem;color:var(--muted);font-weight:600;margin-right:2px}
+  .gs{background:var(--accent-soft);color:#7f1d1d;border-radius:8px;padding:8px 10px;margin:10px 0 6px;font-weight:600}
+  .ge{margin:6px 0 8px;font-size:.95rem;line-height:1.45}
+  .gx{border-top:1px solid var(--line);padding:8px 0}
+  .gzh{font-size:1.25rem}
+  nav button.active{background:var(--bg);color:var(--accent)}
+  main{max-width:680px;margin:0 auto;padding:16px calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+  .hidden{display:none!important}
+  h2{font-size:1rem;margin:0 0 12px}
+  .btn{touch-action:manipulation;border:1px solid var(--line);background:#fff;color:var(--ink);padding:10px 14px;border-radius:10px;font-size:.95rem;font-weight:600;cursor:pointer}
+  .btn:active{transform:scale(.98)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.ghost{background:transparent}
+  .btn.small{padding:6px 10px;font-size:.85rem}
+  .btn.danger{color:var(--bad);border-color:#fecaca}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .row > *{flex:1 1 auto}
+  input,textarea,select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:1rem;font-family:inherit;background:#fff}
+  textarea{min-height:90px;resize:vertical}
+  label{font-size:.82rem;color:var(--muted);display:block;margin:0 0 4px}
+  .muted{color:var(--muted);font-size:.88rem}
+
+  /* Quiz */
+  .prompt{text-align:center}
+  .meaning{font-size:1.35rem;font-weight:700;margin:4px 0 6px}
+  .pinyin{font-size:1.05rem;color:var(--blue);min-height:1.4em}
+  .slots{display:flex;justify-content:center;gap:8px;margin:10px 0 4px}
+  .slot{width:42px;height:42px;border:2px dashed var(--line);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.6rem}
+  .slot.current{border-color:var(--accent);border-style:solid}
+  .slot.done{border-style:solid;border-color:var(--ok);background:var(--ok-soft)}
+  .board-wrap{display:flex;justify-content:center;margin:10px 0}
+  .board{position:relative;width:300px;height:300px;background:#fffdf8;border-radius:6px;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+  .board svg.grid{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .board .target{position:absolute;inset:0}
+  .feedback{text-align:center;font-weight:600;min-height:1.5em;margin:4px 0 10px}
+  .feedback.ok{color:var(--ok)} .feedback.bad{color:var(--bad)} .feedback.warn{color:var(--warn)}
+  .tools{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .tools .full{grid-column:1/-1}
+  .progress{height:6px;background:var(--line);border-radius:6px;overflow:hidden;margin-bottom:12px}
+  .progress > div{height:100%;background:var(--accent);width:0;transition:width .3s}
+  .result{text-align:center}
+  .result .big{font-size:3.2rem;margin:4px 0}
+  .badge{display:inline-block;padding:4px 10px;border-radius:999px;font-weight:700;font-size:.85rem}
+  .badge.ok{background:var(--ok-soft);color:var(--ok)} .badge.bad{background:var(--accent-soft);color:var(--bad)}
+
+  /* Vocab list */
+  .vlist{list-style:none;margin:0;padding:0}
+  .vlist li{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+  .vlist li:last-child{border-bottom:0}
+  .vlist .h{font-size:1.6rem;min-width:64px}
+  .vlist .info{flex:1;min-width:0}
+  .vlist .info .p{color:var(--blue);font-size:.9rem}
+  .vlist .info .m{font-size:.95rem;overflow-wrap:anywhere}
+  .pos{display:inline-block;font-size:.72rem;font-weight:700;color:#7c2d12;background:#ffedd5;border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:middle}
+  .tag{display:inline-block;font-size:.7rem;font-weight:700;color:#1e40af;background:#dbeafe;border-radius:6px;padding:1px 6px;margin-left:4px;vertical-align:middle}
+  .qpos{margin-top:2px}
+  .qpos .pos{margin:0;font-size:.82rem}
+
+  /* Stats */
+  .stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
+  .stat{background:var(--bg);border-radius:10px;padding:10px;text-align:center}
+  .stat b{display:block;font-size:1.4rem}
+  table{width:100%;border-collapse:collapse;font-size:.92rem}
+  th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left}
+  th{color:var(--muted);font-weight:600;font-size:.8rem}
+  td.num,th.num{text-align:right}
+
+  /* Modal */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+  .modal .box{background:#fff;border-radius:16px;padding:16px;width:100%;max-width:320px;text-align:center}
+  .modal .demo{position:relative;width:240px;height:240px;margin:8px auto;background:#fffdf8}
+  .modal .demo svg.grid{position:absolute;inset:0;width:100%;height:100%}
+  .modal .demo .target{position:absolute;inset:0}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 16px;border-radius:10px;font-size:.9rem;z-index:60;opacity:0;transition:opacity .25s;pointer-events:none}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+<header>
+  <h1><span>✍️ Luyện viết chữ Hán</span><span class="sync-badge" id="syncBadge"></span></h1>
+  <nav>
+    <button data-tab="practice" class="active">✍️ Viết</button>
+    <button data-tab="grammar">📘 Ngữ pháp</button>
+    <button data-tab="translate">🔁 Dịch</button>
+    <button data-tab="speak">🎤 Nói</button>
+    <button data-tab="vocab">📚 Từ vựng</button>
+    <button data-tab="stats">📊 Thống kê</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ============ PRACTICE ============ -->
+  <section id="tab-practice">
+    <div class="card" id="startCard">
+      <h2>Kiểm tra từ trí nhớ (Blind Recall)</h2>
+      <p class="muted">Chỉ hiện nghĩa tiếng Việt. Không có nét mờ, không có chữ mẫu. Bạn tự viết từng nét vào ô Mễ tự cách, ứng dụng chấm đúng/sai theo từng nét.</p>
+      <label for="orderSel">Thứ tự từ</label>
+      <select id="orderSel">
+        <option value="random">Ngẫu nhiên</option>
+        <option value="weak">Ưu tiên từ hay viết sai</option>
+        <option value="list">Theo thứ tự danh sách</option>
+      </select>
+      <div style="height:10px"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label for="deckSel">Deck</label>
+          <select id="deckSel"></select></div>
+        <div><label for="posSel">Từ loại</label><select id="posSel"></select></div>
+      </div>
+      <div style="height:10px"></div>
+      <label for="sizeSel">Số từ mỗi phiên</label>
+      <select id="sizeSel"><option value="10">10 từ</option><option value="20">20 từ</option><option value="30">30 từ</option><option value="50">50 từ</option><option value="0">Tất cả</option></select>
+      <div style="height:10px"></div>
+      <label for="strictSel">Độ khắt khe khi chấm nét</label>
+      <select id="strictSel">
+        <option value="1.3">Dễ</option>
+        <option value="1" selected>Bình thường</option>
+        <option value="0.7">Khắt khe</option>
+      </select>
+      <div style="height:14px"></div>
+      <button class="btn primary" id="startBtn" style="width:100%">Bắt đầu kiểm tra</button>
+      <p class="muted" id="startInfo" style="margin-bottom:0"></p>
+    </div>
+
+    <div class="card hidden" id="quizCard">
+      <div class="progress"><div id="progBar"></div></div>
+      <div class="row" style="margin-bottom:6px">
+        <span class="muted" id="progText"></span>
+        <button class="btn small ghost" id="pinyinToggle" style="flex:0 0 auto">Hiện Pinyin</button>
+      </div>
+      <div class="prompt">
+        <div class="meaning" id="qMeaning"></div>
+        <div class="qpos" id="qPos"></div>
+        <div class="pinyin" id="qPinyin"></div>
+        <div class="slots hz" id="qSlots"></div>
+      </div>
+      <div class="board-wrap">
+        <div class="board" id="board">
+          <svg class="grid" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="0.75" y="0.75" width="98.5" height="98.5" fill="none" stroke="#b91c1c" stroke-width="1.5"/>
+            <g stroke="#e9a5a5" stroke-width="0.5" stroke-dasharray="2 2">
+              <line x1="0" y1="50" x2="100" y2="50"/><line x1="50" y1="0" x2="50" y2="100"/>
+              <line x1="0" y1="0" x2="100" y2="100"/><line x1="100" y1="0" x2="0" y2="100"/>
+            </g>
+          </svg>
+          <div class="target" id="target"></div>
+        </div>
+      </div>
+      <div class="feedback" id="feedback"></div>
+      <div class="tools">
+        <button class="btn" id="hintBtn">💡 Gợi ý nét tiếp</button>
+        <button class="btn" id="animBtn">🎞️ Xem thứ tự viết</button>
+        <button class="btn" id="retryBtn">↺ Viết lại chữ này</button>
+        <button class="btn danger" id="giveUpBtn">Xem đáp án</button>
+        <button class="btn ghost full" id="quitBtn">Kết thúc phiên</button>
+      </div>
+    </div>
+
+    <div class="card hidden result" id="resultCard">
+      <div id="resultBadge"></div>
+      <div class="big hz" id="rHanzi"></div>
+      <div class="pinyin" id="rPinyin"></div>
+      <div style="font-weight:600;margin:4px 0 10px" id="rMeaning"></div>
+      <div id="rPos" style="margin:-4px 0 8px"></div>
+      <p class="muted" id="rDetail"></p>
+      <div class="row">
+        <button class="btn" id="rReplay">🎞️ Xem lại cách viết</button>
+        <button class="btn primary" id="nextBtn">Từ tiếp theo →</button>
+      </div>
+    </div>
+
+    <div class="card hidden result" id="summaryCard">
+      <h2>Kết thúc phiên luyện tập 🎉</h2>
+      <div class="stats-grid">
+        <div class="stat"><b id="sOk" style="color:var(--ok)">0</b><span class="muted">Viết đúng</span></div>
+        <div class="stat"><b id="sBad" style="color:var(--bad)">0</b><span class="muted">Cần ôn lại</span></div>
+      </div>
+      <p class="muted" id="sWeak"></p>
+      <button class="btn primary" id="againBtn" style="width:100%">Luyện phiên mới</button>
+    </div>
+  </section>
+
+  <!-- ============ GRAMMAR ============ -->
+  <section id="tab-grammar" class="hidden">
+    <div class="card">
+      <h2>📘 Ngữ pháp</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label for="gLevel">Cấp độ</label><select id="gLevel"></select></div>
+        <div><label for="gShow">Hiển thị</label>
+          <select id="gShow"><option value="all">Tất cả</option><option value="todo">Chưa nắm vững</option><option value="done">Đã nắm vững</option></select></div>
+      </div>
+      <div style="height:8px"></div>
+      <input id="gSearch" type="search" placeholder="Tìm: 把, so sánh, 了, bổ ngữ…" autocomplete="off">
+      <div class="row" style="margin-top:8px">
+        <span class="muted" id="gProgress"></span>
+        <button class="btn small ghost" id="gPyToggle" style="flex:0 0 auto">Hiện Pinyin</button>
+      </div>
+      <p class="muted" id="gNote" style="margin-bottom:0;font-size:.8rem"></p>
+    </div>
+    <div id="gList"></div>
+  </section>
+
+  <!-- ============ TRANSLATE ============ -->
+  <section id="tab-translate" class="hidden">
+    <div class="card" id="trSetup">
+      <h2>🔁 Luyện dịch</h2>
+      <p class="muted" style="margin-top:0">Câu luyện lấy từ các câu ví dụ ngữ pháp. Dịch Việt → Trung: gõ bằng bàn phím tiếng Trung (pinyin hoặc viết tay) trên iPad.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label for="trDir">Chiều dịch</label>
+          <select id="trDir"><option value="mix">Cả hai chiều</option><option value="vi2zh">Việt → Trung</option><option value="zh2vi">Trung → Việt</option></select></div>
+        <div><label for="trLevel">Cấp độ</label><select id="trLevel"></select></div>
+        <div><label for="trCount">Số câu</label>
+          <select id="trCount"><option value="10">10 câu</option><option value="20">20 câu</option><option value="0">Tất cả</option></select></div>
+        <div><label for="trOrder">Thứ tự</label>
+          <select id="trOrder"><option value="weak">Ưu tiên câu hay sai</option><option value="random">Ngẫu nhiên</option></select></div>
+      </div>
+      <div id="trFocus" class="muted" style="margin-top:8px"></div>
+      <div style="height:10px"></div>
+      <button class="btn primary" id="trStart" style="width:100%">Bắt đầu luyện dịch</button>
+      <p class="muted" id="trInfo" style="margin-bottom:0"></p>
+    </div>
+    <div class="card hidden" id="trCard">
+      <div class="progress"><div id="trBar"></div></div>
+      <div class="row" style="margin-bottom:6px"><span class="muted" id="trProg"></span><button class="btn small ghost" id="trQuit" style="flex:0 0 auto">Kết thúc</button></div>
+      <div class="muted" id="trDirLabel" style="font-weight:600"></div>
+      <div id="trPrompt" class="tr-prompt"></div>
+      <div class="row" style="margin:6px 0">
+        <button class="btn small" id="trHintG">💡 Gợi ý ngữ pháp</button>
+        <button class="btn small" id="trHintP">Gợi ý pinyin</button>
+        <button class="btn small" id="trSay">🔊 Nghe</button>
+      </div>
+      <div class="muted" id="trHint" style="white-space:pre-line"></div>
+      <textarea id="trIn" rows="3" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:8px"></textarea>
+      <div class="row" style="margin-top:8px">
+        <button class="btn" id="trSkip">Không biết</button>
+        <button class="btn primary" id="trCheck">Kiểm tra</button>
+      </div>
+      <div id="trResult" class="hidden" style="margin-top:12px"></div>
+    </div>
+    <div class="card hidden result" id="trSummary"></div>
+  </section>
+
+  <!-- ============ SPEAK ============ -->
+  <section id="tab-speak" class="hidden">
+    <div class="card" id="spSetup">
+      <h2>🎤 Luyện nói</h2>
+      <p class="muted" style="margin-top:0">Nghe câu mẫu, bấm 🎤 rồi đọc to. App nhận dạng giọng nói và tô màu từng chữ đúng/sai.</p>
+      <p id="spSupport" class="muted" style="color:var(--bad)"></p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label for="spSrc">Nội dung</label>
+          <select id="spSrc"><option value="sent">Câu ví dụ ngữ pháp</option><option value="vocab">Từ vựng theo deck</option></select></div>
+        <div id="spLevelWrap"><label for="spLevel">Cấp độ</label><select id="spLevel"></select></div>
+        <div id="spDeckWrap" class="hidden"><label for="spDeck">Deck</label><select id="spDeck"></select></div>
+        <div><label for="spCount">Số mục</label>
+          <select id="spCount"><option value="10">10</option><option value="20">20</option><option value="0">Tất cả</option></select></div>
+      </div>
+      <div style="height:8px"></div>
+      <label for="spRate">Tốc độ giọng mẫu: <span id="spRateVal"></span></label>
+      <input id="spRate" type="range" min="0.5" max="1.2" step="0.1" style="padding:0">
+      <div id="spFocus" class="muted" style="margin-top:8px"></div>
+      <div style="height:10px"></div>
+      <button class="btn primary" id="spStart" style="width:100%">Bắt đầu luyện nói</button>
+    </div>
+    <div class="card hidden" id="spCard">
+      <div class="progress"><div id="spBar"></div></div>
+      <div class="row" style="margin-bottom:6px"><span class="muted" id="spProg"></span>
+        <button class="btn small ghost" id="spPyToggle" style="flex:0 0 auto">Ẩn Pinyin</button>
+        <button class="btn small ghost" id="spQuit" style="flex:0 0 auto">Kết thúc</button></div>
+      <div class="sp-target hz" id="spTarget"></div>
+      <div class="pinyin" id="spPinyin" style="text-align:center"></div>
+      <div class="muted" id="spMeaning" style="text-align:center;margin-bottom:10px"></div>
+      <div class="tools">
+        <button class="btn" id="spListen">🔊 Nghe mẫu</button>
+        <button class="btn" id="spSlow">🐢 Nghe chậm</button>
+        <button class="btn primary full" id="spMic">🎤 Bấm để nói</button>
+      </div>
+      <div class="feedback" id="spLive" style="margin-top:10px"></div>
+      <div id="spResult" class="hidden" style="text-align:center"></div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn primary" id="spNext">Câu tiếp →</button>
+      </div>
+    </div>
+    <div class="card hidden result" id="spSummary"></div>
+  </section>
+
+  <!-- ============ VOCAB ============ -->
+  <section id="tab-vocab" class="hidden">
+    <div class="card">
+      <h2>Thêm từ mới</h2>
+      <div style="display:grid;gap:8px">
+        <div><label for="inHanzi">Chữ Hán</label><input id="inHanzi" class="hz" placeholder="vd: 学生" autocomplete="off"></div>
+        <div><label for="inPinyin">Pinyin</label><input id="inPinyin" placeholder="vd: xuésheng" autocomplete="off"></div>
+        <div><label for="inPos">Từ loại</label><input id="inPos" list="posList" placeholder="vd: Danh từ" autocomplete="off">
+          <datalist id="posList"></datalist></div>
+        <div><label for="inMeaning">Nghĩa tiếng Việt</label><input id="inMeaning" placeholder="vd: học sinh" autocomplete="off"></div>
+        <div><label for="inDeck">Deck</label><select id="inDeck"></select>
+          <input id="inDeckNew" class="hidden" placeholder="Tên deck mới, vd: Bài 1" autocomplete="off" style="margin-top:6px"></div>
+        <button class="btn primary" id="addBtn">+ Thêm từ</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Nhập nhiều từ cùng lúc</h2>
+      <p class="muted" style="margin-top:0">Mỗi dòng một từ, định dạng: <b>Chữ Hán - Pinyin - Từ loại - Nghĩa</b> (có thể bỏ trống từ loại: <b>Chữ Hán - Pinyin - Nghĩa</b>)</p>
+      <textarea id="bulkIn" placeholder="老师 - lǎoshī - Danh từ - giáo viên&#10;喝 - hē - Động từ - uống"></textarea>
+      <div style="height:8px"></div>
+      <label for="bulkDeck">Nhập vào deck</label>
+      <select id="bulkDeck"></select>
+      <input id="bulkDeckNew" class="hidden" placeholder="Tên deck mới, vd: HSK2 - Bài 1" autocomplete="off" style="margin-top:6px">
+      <div style="height:8px"></div>
+      <button class="btn" id="bulkBtn" style="width:100%">Nhập danh sách</button>
+    </div>
+    <div class="card">
+      <h2>📚 Bộ từ có sẵn</h2>
+      <p class="muted" style="margin-top:0">HSK 1 (HSK 3.0): 298 từ, kèm pinyin, từ loại và nghĩa tiếng Việt. Từ đã có sẽ được giữ nguyên và chỉ bổ sung từ loại còn thiếu.</p>
+      <button class="btn primary" id="hsk1Btn" style="width:100%">Nạp bộ HSK 1</button>
+    </div>
+    <div class="card">
+      <h2>🗂️ Deck của tôi</h2>
+      <p class="muted" style="margin-top:0">Mỗi từ thuộc một deck. Muốn chuyển từ sang deck khác, hãy lọc danh sách bên dưới rồi bấm "Chuyển sang deck…".</p>
+      <ul class="vlist" id="deckList"></ul>
+    </div>
+    <div class="card">
+      <div class="row" style="margin-bottom:6px">
+        <h2 style="margin:0">Danh sách của tôi (<span id="vCount">0</span>)</h2>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:4px 0 6px">
+        <input id="vSearch" type="search" placeholder="Tìm chữ Hán, pinyin, nghĩa…" autocomplete="off">
+        <select id="vDeck"></select>
+      </div>
+      <div class="row" style="margin-bottom:4px">
+        <button class="btn small" id="moveBtn">↪ Chuyển sang deck…</button>
+        <button class="btn small danger" id="delShownBtn">Xóa các từ đang hiện</button>
+      </div>
+      <p class="muted" id="vShown" style="margin:2px 0"></p>
+      <ul class="vlist" id="vList"></ul>
+      <div class="row" style="margin-top:12px">
+        <button class="btn small" id="seedBtn">Thêm lại 5 từ mẫu</button>
+        <button class="btn small danger" id="clearBtn">Xóa tất cả</button>
+      </div>
+      <button class="btn" id="offlineBtn" style="width:100%;margin-top:10px">⬇️ Tải dữ liệu nét để dùng offline</button>
+      <p class="muted" id="offlineInfo" style="margin-bottom:0">App tự tải dữ liệu nét khi bạn thêm từ. Bấm nút này khi có mạng để chắc chắn mọi từ đều dùng được offline.</p>
+    </div>
+    <div class="card" id="syncCard">
+      <h2>☁️ Đồng bộ giữa các thiết bị</h2>
+      <div id="syncOff">
+        <p class="muted" style="margin-top:0">Từ vựng và thống kê được lưu vào một GitHub Gist <b>riêng tư</b> của bạn. Mỗi thiết bị chỉ cần dán token một lần, sau đó app tự đồng bộ.</p>
+        <label for="tokIn">GitHub token (quyền <b>gist</b>)</label>
+        <input id="tokIn" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="ghp_...">
+        <div style="height:8px"></div>
+        <button class="btn primary" id="syncConnect" style="width:100%">Kết nối</button>
+      </div>
+      <div id="syncOn" class="hidden">
+        <p id="syncWho" style="margin-top:0"></p>
+        <div class="row">
+          <button class="btn" id="syncNowBtn">↻ Đồng bộ ngay</button>
+          <button class="btn danger" id="syncOffBtn">Ngắt kết nối</button>
+        </div>
+      </div>
+      <p class="muted" id="syncHostWarn" style="color:var(--bad)"></p>
+      <button class="btn small" id="syncDiagBtn" style="margin-top:10px">🩺 Kiểm tra đồng bộ</button>
+      <p class="muted" id="syncMsg" style="margin-bottom:0;white-space:pre-line"></p>
+      <p class="muted" style="margin:10px 0 0;font-size:.75rem">Phiên bản app: <span id="appVer"></span></p>
+    </div>
+  </section>
+
+  <!-- ============ STATS ============ -->
+  <section id="tab-stats" class="hidden">
+    <div class="card">
+      <h2>Tổng quan</h2>
+      <div class="stats-grid">
+        <div class="stat"><b id="stWords">0</b><span class="muted">Số từ</span></div>
+        <div class="stat"><b id="stSessions">0</b><span class="muted">Phiên đã luyện</span></div>
+        <div class="stat"><b id="stOk" style="color:var(--ok)">0</b><span class="muted">Lần viết đúng</span></div>
+        <div class="stat"><b id="stBad" style="color:var(--bad)">0</b><span class="muted">Lần viết sai</span></div>
+        <div class="stat"><b id="stStrokeOk">0</b><span class="muted">Nét đúng</span></div>
+        <div class="stat"><b id="stStrokeAcc">–</b><span class="muted">Tỉ lệ nét đúng</span></div>
+        <div class="stat"><b id="stGram">0</b><span class="muted">Ngữ pháp đã nắm vững</span></div>
+        <div class="stat"><b id="stTr">–</b><span class="muted">Dịch đúng · <span id="stTrN"></span></span></div>
+        <div class="stat"><b id="stSp">–</b><span class="muted">Nói đạt · <span id="stSpN"></span></span></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Theo từng từ</h2>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Từ</th><th class="num">Đúng</th><th class="num">Sai</th><th class="num">Nét sai</th><th class="num">Chính xác</th></tr></thead>
+          <tbody id="stTable"></tbody>
+        </table>
+      </div>
+      <div style="height:12px"></div>
+      <button class="btn small danger" id="resetStatsBtn">Đặt lại thống kê</button>
+    </div>
+  </section>
+</main>
+
+<!-- Animation modal -->
+<div class="modal hidden" id="modal">
+  <div class="box">
+    <h2 style="margin-bottom:4px">Thứ tự nét viết</h2>
+    <div class="muted" id="modalInfo"></div>
+    <div class="demo">
+      <svg class="grid" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <rect x="0.75" y="0.75" width="98.5" height="98.5" fill="none" stroke="#b91c1c" stroke-width="1.5"/>
+        <g stroke="#e9a5a5" stroke-width="0.5" stroke-dasharray="2 2">
+          <line x1="0" y1="50" x2="100" y2="50"/><line x1="50" y1="0" x2="50" y2="100"/>
+          <line x1="0" y1="0" x2="100" y2="100"/><line x1="100" y1="0" x2="0" y2="100"/>
+        </g>
+      </svg>
+      <div class="target" id="demoTarget"></div>
+    </div>
+    <div class="row">
+      <button class="btn" id="modalReplay">↺ Chiếu lại</button>
+      <button class="btn primary" id="modalClose">Đóng & viết tiếp</button>
+    </div>
+  </div>
+</div>
+<div class="modal hidden" id="pModal">
+  <div class="box">
+    <p id="pMsg" style="font-weight:600;margin:4px 0 10px"></p>
+    <input id="pIn" list="deckDl" autocomplete="off">
+    <datalist id="deckDl"></datalist>
+    <p class="muted" id="pHint" style="margin:6px 0 0;font-size:.8rem"></p>
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="pNo">Hủy</button>
+      <button class="btn primary" id="pYes">OK</button>
+    </div>
+  </div>
+</div>
+<div class="modal hidden" id="cModal">
+  <div class="box">
+    <p id="cMsg" style="font-weight:600;margin:4px 0 16px"></p>
+    <div class="row">
+      <button class="btn" id="cNo">Hủy</button>
+      <button class="btn primary" id="cYes">Đồng ý</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  'use strict';
+  const LS_KEY = 'hanzi-trainer-v1';
+  const GRAMMAR = [{"id":"1-01","l":1,"t":"Câu chữ 是","s":"A + 是 + B　/　A + 不是 + B","e":"Dùng để nói A là B (giới thiệu, xác định). Phủ định thêm 不 trước 是. Không dùng 是 trước tính từ.","x":[["我是学生。","Wǒ shì xuésheng.","Tôi là học sinh."],["他不是老师。","Tā bú shì lǎoshī.","Anh ấy không phải là giáo viên."],["这是我的手机。","Zhè shì wǒ de shǒujī.","Đây là điện thoại của tôi."]]},{"id":"1-02","l":1,"t":"Câu hỏi với 吗","s":"Câu trần thuật + 吗？","e":"Thêm 吗 vào cuối câu trần thuật để biến thành câu hỏi có/không. Trật tự từ giữ nguyên.","x":[["你是中国人吗？","Nǐ shì Zhōngguórén ma?","Bạn là người Trung Quốc à?"],["你忙吗？","Nǐ máng ma?","Bạn có bận không?"],["你喜欢喝茶吗？","Nǐ xǐhuan hē chá ma?","Bạn có thích uống trà không?"]]},{"id":"1-03","l":1,"t":"Phủ định với 不","s":"不 + Động từ / Tính từ","e":"不 phủ định thói quen, ý muốn, hiện tại hoặc tương lai. 不 đọc thành bú khi đứng trước thanh 4.","x":[["我不喝咖啡。","Wǒ bù hē kāfēi.","Tôi không uống cà phê."],["今天不冷。","Jīntiān bù lěng.","Hôm nay không lạnh."],["他明天不去学校。","Tā míngtiān bú qù xuéxiào.","Ngày mai anh ấy không đến trường."]]},{"id":"1-04","l":1,"t":"Phủ định với 没（有）","s":"没有 + Danh từ　/　没（有）+ Động từ","e":"没有 + danh từ: không có. 没（有）+ động từ: chưa/đã không làm (sự việc trong quá khứ). Không dùng 了 sau động từ khi đã có 没.","x":[["我没有钱。","Wǒ méiyǒu qián.","Tôi không có tiền."],["他昨天没来。","Tā zuótiān méi lái.","Hôm qua anh ấy không đến."],["我还没吃饭。","Wǒ hái méi chī fàn.","Tôi vẫn chưa ăn cơm."]]},{"id":"1-05","l":1,"t":"Câu vị ngữ tính từ với 很","s":"Chủ ngữ + 很 + Tính từ","e":"Tính từ làm vị ngữ trực tiếp, không cần 是. Thường thêm 很 phía trước, lúc này 很 không nhất thiết mang nghĩa \"rất\".","x":[["我很高兴。","Wǒ hěn gāoxìng.","Tôi rất vui."],["这个苹果很大。","Zhège píngguǒ hěn dà.","Quả táo này rất to."],["北京的冬天很冷。","Běijīng de dōngtiān hěn lěng.","Mùa đông ở Bắc Kinh rất lạnh."]]},{"id":"1-06","l":1,"t":"Đại từ nghi vấn 什么、谁、哪儿","s":"Đặt từ để hỏi vào đúng vị trí của thông tin cần hỏi","e":"什么: cái gì; 谁: ai; 哪儿/哪里: ở đâu. Câu hỏi giữ nguyên trật tự câu trần thuật và không thêm 吗.","x":[["你叫什么名字？","Nǐ jiào shénme míngzi?","Bạn tên là gì?"],["他是谁？","Tā shì shéi?","Anh ấy là ai?"],["你去哪儿？","Nǐ qù nǎr?","Bạn đi đâu?"]]},{"id":"1-07","l":1,"t":"Hỏi số lượng: 几 và 多少","s":"几 + Lượng từ + Danh từ　/　多少 (+ Lượng từ) + Danh từ","e":"几 hỏi số lượng nhỏ (thường dưới 10), bắt buộc có lượng từ. 多少 hỏi số lượng bất kỳ, có thể bỏ lượng từ, dùng để hỏi giá tiền.","x":[["你家有几口人？","Nǐ jiā yǒu jǐ kǒu rén?","Nhà bạn có mấy người?"],["这个多少钱？","Zhège duōshao qián?","Cái này bao nhiêu tiền?"],["你们班有多少学生？","Nǐmen bān yǒu duōshao xuésheng?","Lớp các bạn có bao nhiêu học sinh?"]]},{"id":"1-08","l":1,"t":"Câu chữ 有","s":"A + 有 + B　/　Nơi chốn + 有 + Vật/Người","e":"有 diễn tả sở hữu (A có B) hoặc tồn tại (ở đâu đó có gì). Phủ định luôn là 没有, không dùng 不有.","x":[["我有一个哥哥。","Wǒ yǒu yí ge gēge.","Tôi có một anh trai."],["桌子上有一本书。","Zhuōzi shang yǒu yì běn shū.","Trên bàn có một quyển sách."],["我没有电脑。","Wǒ méiyǒu diànnǎo.","Tôi không có máy tính."]]},{"id":"1-09","l":1,"t":"在 chỉ vị trí","s":"Người/Vật + 在 + Nơi chốn　/　在 + Nơi chốn + Động từ","e":"在 là động từ \"ở\" khi đứng một mình; là giới từ khi đứng trước động từ, chỉ nơi hành động diễn ra.","x":[["我在家。","Wǒ zài jiā.","Tôi ở nhà."],["她在学校学习。","Tā zài xuéxiào xuéxí.","Cô ấy học ở trường."],["你的书在桌子上。","Nǐ de shū zài zhuōzi shang.","Sách của bạn ở trên bàn."]]},{"id":"1-10","l":1,"t":"Số từ + Lượng từ + Danh từ","s":"Số / 这 / 那 / 几 + Lượng từ + Danh từ","e":"Khi đếm hoặc chỉ định, giữa số từ (hay 这, 那) và danh từ phải có lượng từ: 个, 本, 口, 件... Số 2 đứng trước lượng từ dùng 两, không dùng 二.","x":[["我有三个朋友。","Wǒ yǒu sān ge péngyou.","Tôi có ba người bạn."],["这是一本汉语书。","Zhè shì yì běn Hànyǔ shū.","Đây là một quyển sách tiếng Trung."],["我买了两件衣服。","Wǒ mǎile liǎng jiàn yīfu.","Tôi đã mua hai bộ quần áo."]]},{"id":"1-11","l":1,"t":"Trợ từ sở hữu 的","s":"Danh từ / Đại từ + 的 + Danh từ","e":"的 nối người sở hữu với vật được sở hữu (\"của\"). Với người thân hoặc tổ chức gần gũi có thể bỏ 的: 我妈妈, 我们学校.","x":[["这是我的书。","Zhè shì wǒ de shū.","Đây là sách của tôi."],["我妈妈是医生。","Wǒ māma shì yīshēng.","Mẹ tôi là bác sĩ."],["老师的电脑很新。","Lǎoshī de diànnǎo hěn xīn.","Máy tính của thầy giáo rất mới."]]},{"id":"1-12","l":1,"t":"Phó từ 也 và 都","s":"Chủ ngữ + 也 / 都 + Động từ (也 đứng trước 都)","e":"也: cũng; 都: đều. Hai phó từ luôn đứng sau chủ ngữ và trước động từ. Khi dùng cả hai: 也都.","x":[["我也是学生。","Wǒ yě shì xuésheng.","Tôi cũng là học sinh."],["我们都喜欢喝茶。","Wǒmen dōu xǐhuan hē chá.","Chúng tôi đều thích uống trà."],["他们也都去北京。","Tāmen yě dōu qù Běijīng.","Họ cũng đều đi Bắc Kinh."]]},{"id":"1-13","l":1,"t":"Câu hỏi rút gọn với 呢","s":"Danh từ / Đại từ + 呢？","e":"Hỏi lại cùng câu hỏi trước đó với người khác (\"còn... thì sao?\"), hoặc hỏi vật/người đang ở đâu.","x":[["我很好，你呢？","Wǒ hěn hǎo, nǐ ne?","Tôi khỏe, còn bạn thì sao?"],["我的手机呢？","Wǒ de shǒujī ne?","Điện thoại của tôi đâu rồi?"]]},{"id":"1-14","l":1,"t":"Vị trí của trạng ngữ thời gian","s":"Thời gian + Chủ ngữ + Động từ　/　Chủ ngữ + Thời gian + Động từ","e":"Từ chỉ thời gian đứng trước động từ, có thể đứng đầu câu hoặc ngay sau chủ ngữ, không đặt ở cuối câu như tiếng Việt.","x":[["我明天去北京。","Wǒ míngtiān qù Běijīng.","Ngày mai tôi đi Bắc Kinh."],["他早上七点起床。","Tā zǎoshang qī diǎn qǐchuáng.","Anh ấy thức dậy lúc 7 giờ sáng."],["今天下午我们上课。","Jīntiān xiàwǔ wǒmen shàngkè.","Chiều nay chúng tôi lên lớp."]]},{"id":"1-15","l":1,"t":"Nói ngày tháng và thứ","s":"Năm + 月 + 号 + 星期…","e":"Thứ tự từ lớn đến nhỏ: năm → tháng → ngày → thứ. Hỏi ngày: 几月几号？ Hỏi thứ: 星期几？ Câu ngày tháng thường không cần 是.","x":[["今天几月几号？","Jīntiān jǐ yuè jǐ hào?","Hôm nay là ngày mấy tháng mấy?"],["今天星期三。","Jīntiān xīngqīsān.","Hôm nay là thứ Tư."],["我的生日是九月十号。","Wǒ de shēngrì shì jiǔ yuè shí hào.","Sinh nhật tôi là ngày 10 tháng 9."]]},{"id":"1-16","l":1,"t":"Trợ từ 了 (hoàn thành, thay đổi)","s":"Động từ + 了 (+ Tân ngữ)　/　Câu + 了","e":"了 sau động từ: hành động đã hoàn thành. 了 cuối câu: một tình huống đã xảy ra hoặc đã thay đổi. Phủ định dùng 没 và bỏ 了.","x":[["我买了一个苹果。","Wǒ mǎile yí ge píngguǒ.","Tôi đã mua một quả táo."],["他去医院了。","Tā qù yīyuàn le.","Anh ấy đi bệnh viện rồi."],["下雨了。","Xià yǔ le.","Trời mưa rồi."]]},{"id":"1-17","l":1,"t":"Động từ năng nguyện 想 và 要","s":"Chủ ngữ + 想 / 要 + Động từ","e":"想: muốn (nhẹ nhàng, mong muốn). 要: muốn, cần, sẽ (ý chí mạnh hơn). Phủ định thường dùng 不想.","x":[["我想喝水。","Wǒ xiǎng hē shuǐ.","Tôi muốn uống nước."],["我要去商店。","Wǒ yào qù shāngdiàn.","Tôi muốn đi cửa hàng."],["我不想看电视。","Wǒ bù xiǎng kàn diànshì.","Tôi không muốn xem ti vi."]]},{"id":"1-18","l":1,"t":"会、能、可以","s":"Chủ ngữ + 会 / 能 / 可以 + Động từ","e":"会: biết làm (kỹ năng học được). 能: có khả năng, điều kiện cho phép. 可以: được phép, có thể.","x":[["我会说汉语。","Wǒ huì shuō Hànyǔ.","Tôi biết nói tiếng Trung."],["你明天能来吗？","Nǐ míngtiān néng lái ma?","Ngày mai bạn có thể đến không?"],["这里可以坐吗？","Zhèli kěyǐ zuò ma?","Ở đây có thể ngồi không?"]]},{"id":"1-19","l":1,"t":"Câu liên động","s":"Chủ ngữ + Động từ 1 (+ Tân ngữ) + Động từ 2 (+ Tân ngữ)","e":"Hai động từ cùng chủ ngữ, theo thứ tự diễn ra; động từ sau thường là mục đích hoặc động từ trước là phương tiện.","x":[["我去商店买东西。","Wǒ qù shāngdiàn mǎi dōngxi.","Tôi đi cửa hàng mua đồ."],["他坐出租车去学校。","Tā zuò chūzūchē qù xuéxiào.","Anh ấy đi taxi đến trường."],["我们去饭店吃饭。","Wǒmen qù fàndiàn chī fàn.","Chúng tôi đi nhà hàng ăn cơm."]]},{"id":"1-20","l":1,"t":"Trợ từ 吧","s":"Câu + 吧","e":"Cuối câu cầu khiến: đề nghị nhẹ nhàng (\"nhé\", \"đi\"). Cuối câu hỏi: phỏng đoán, muốn xác nhận (\"chắc là... nhỉ\").","x":[["我们去吃饭吧。","Wǒmen qù chī fàn ba.","Chúng ta đi ăn cơm đi."],["你是王老师吧？","Nǐ shì Wáng lǎoshī ba?","Chắc thầy là thầy Vương nhỉ?"]]},{"id":"1-21","l":1,"t":"太……了","s":"太 + Tính từ + 了","e":"Diễn tả mức độ quá cao, có thể khen (太好了) hoặc chê (太贵了). Thường có 了 ở cuối.","x":[["太好了！","Tài hǎo le!","Tốt quá!"],["这件衣服太贵了。","Zhè jiàn yīfu tài guì le.","Bộ quần áo này đắt quá."]]},{"id":"1-22","l":1,"t":"Hành động đang diễn ra: 正在……呢","s":"Chủ ngữ + (正)在 + Động từ (+ 呢)","e":"Diễn tả hành động đang tiếp diễn. Có thể dùng 正在, 在, hoặc chỉ 呢 ở cuối câu.","x":[["他正在看电视呢。","Tā zhèngzài kàn diànshì ne.","Anh ấy đang xem ti vi."],["我们在上课。","Wǒmen zài shàngkè.","Chúng tôi đang học."]]},{"id":"1-23","l":1,"t":"有一点儿 và 一点儿","s":"有（一）点儿 + Tính từ　/　Động từ/Tính từ + 一点儿","e":"有点儿 đứng trước tính từ: hơi... (thường mang ý không hài lòng). 一点儿 đứng sau động từ hoặc tính từ: một chút, hơn một chút.","x":[["今天有点儿冷。","Jīntiān yǒudiǎnr lěng.","Hôm nay hơi lạnh."],["我会说一点儿汉语。","Wǒ huì shuō yìdiǎnr Hànyǔ.","Tôi biết nói một chút tiếng Trung."]]},{"id":"1-24","l":1,"t":"Liên từ 和","s":"Danh từ + 和 + Danh từ","e":"和 nối hai danh từ hoặc đại từ (\"và\", \"với\"). Không dùng 和 để nối hai câu hay hai mệnh đề.","x":[["我和我朋友去看电影。","Wǒ hé wǒ péngyou qù kàn diànyǐng.","Tôi và bạn tôi đi xem phim."],["我喜欢猫和狗。","Wǒ xǐhuan māo hé gǒu.","Tôi thích mèo và chó."]]},{"id":"2-01","l":2,"t":"So sánh hơn với 比","s":"A + 比 + B + Tính từ (+ mức độ)","e":"A hơn B về mặt nào đó. Không dùng 很 trước tính từ trong câu so sánh; có thể thêm 一点儿, 多了 sau tính từ.","x":[["我比他高。","Wǒ bǐ tā gāo.","Tôi cao hơn anh ấy."],["今天比昨天热。","Jīntiān bǐ zuótiān rè.","Hôm nay nóng hơn hôm qua."],["这个比那个贵一点儿。","Zhège bǐ nàge guì yìdiǎnr.","Cái này đắt hơn cái kia một chút."]]},{"id":"2-02","l":2,"t":"So sánh kém: 没有……（那么）","s":"A + 没有 + B + (那么/这么) + Tính từ","e":"A không bằng B. Đây là cách phủ định tự nhiên nhất của câu so sánh với 比.","x":[["我没有他那么高。","Wǒ méiyǒu tā nàme gāo.","Tôi không cao bằng anh ấy."],["今天没有昨天冷。","Jīntiān méiyǒu zuótiān lěng.","Hôm nay không lạnh bằng hôm qua."]]},{"id":"2-03","l":2,"t":"Trợ từ 过 (kinh nghiệm)","s":"Động từ + 过 (+ Tân ngữ)　/　没 + Động từ + 过","e":"Diễn tả đã từng trải qua việc gì trong quá khứ. Phủ định: 没（有）+ động từ + 过.","x":[["我去过中国。","Wǒ qùguo Zhōngguó.","Tôi đã từng đến Trung Quốc."],["你吃过饺子吗？","Nǐ chīguo jiǎozi ma?","Bạn đã từng ăn sủi cảo chưa?"],["我没看过这个电影。","Wǒ méi kànguo zhège diànyǐng.","Tôi chưa từng xem bộ phim này."]]},{"id":"2-04","l":2,"t":"Trợ từ 着 (trạng thái tiếp diễn)","s":"Động từ + 着","e":"Diễn tả trạng thái kéo dài do hành động để lại, hoặc cách thức đi kèm hành động khác (Động từ 1 + 着 + Động từ 2).","x":[["门开着。","Mén kāizhe.","Cửa đang mở."],["他笑着说：\"你好！\"","Tā xiàozhe shuō: \"Nǐ hǎo!\"","Anh ấy cười nói: \"Xin chào!\""],["她穿着一件红色的衣服。","Tā chuānzhe yí jiàn hóngsè de yīfu.","Cô ấy đang mặc một bộ đồ màu đỏ."]]},{"id":"2-05","l":2,"t":"Bổ ngữ trạng thái với 得","s":"Động từ + 得 + (很) + Tính từ","e":"Đánh giá, mô tả kết quả hoặc mức độ của hành động. Nếu có tân ngữ, lặp lại động từ: 他说汉语说得很好.","x":[["他跑得很快。","Tā pǎo de hěn kuài.","Anh ấy chạy rất nhanh."],["你说得很好。","Nǐ shuō de hěn hǎo.","Bạn nói rất hay."],["她唱歌唱得不错。","Tā chàng gē chàng de búcuò.","Cô ấy hát khá hay."]]},{"id":"2-06","l":2,"t":"Trợ từ 地 (trạng ngữ cách thức)","s":"Tính từ + 地 + Động từ","e":"Mô tả cách thức thực hiện hành động; 地 đứng giữa tính từ (thường 2 âm tiết hoặc lặp lại) và động từ.","x":[["他高兴地说。","Tā gāoxìng de shuō.","Anh ấy vui vẻ nói."],["孩子们快乐地跳舞。","Háizimen kuàilè de tiàowǔ.","Bọn trẻ vui vẻ nhảy múa."]]},{"id":"2-07","l":2,"t":"Bổ ngữ xu hướng đơn 来 / 去","s":"Động từ + 来 / 去","e":"来: hành động hướng về phía người nói. 去: hành động hướng ra xa người nói.","x":[["你快进来吧。","Nǐ kuài jìnlai ba.","Bạn mau vào đi."],["他回去了。","Tā huíqu le.","Anh ấy về rồi."],["请上来。","Qǐng shànglai.","Mời lên đây."]]},{"id":"2-08","l":2,"t":"Bổ ngữ kết quả","s":"Động từ + 完 / 见 / 懂 / 错 / 好 …","e":"Thành phần thứ hai cho biết kết quả của hành động. Phủ định dùng 没: 我没听懂.","x":[["我看完了这本书。","Wǒ kànwánle zhè běn shū.","Tôi đã đọc xong quyển sách này."],["你听懂了吗？","Nǐ tīngdǒng le ma?","Bạn nghe hiểu chưa?"],["对不起，我写错了。","Duìbuqǐ, wǒ xiěcuò le.","Xin lỗi, tôi viết sai rồi."]]},{"id":"2-09","l":2,"t":"Sắp xảy ra: 要……了 / 快要……了","s":"(快)要 + Động từ + 了","e":"Diễn tả sự việc sắp xảy ra. Khi có thời gian cụ thể (明天, 下个月...) chỉ dùng 要……了, không dùng 快要.","x":[["快要下雨了。","Kuàiyào xià yǔ le.","Sắp mưa rồi."],["火车要开了。","Huǒchē yào kāi le.","Tàu sắp chạy rồi."],["我明天就要回国了。","Wǒ míngtiān jiù yào huí guó le.","Ngày mai tôi sắp về nước rồi."]]},{"id":"2-10","l":2,"t":"已经……了","s":"已经 + Động từ / Tính từ + 了","e":"Diễn tả việc đã xảy ra hoặc đã đạt đến trạng thái nào đó (\"đã... rồi\").","x":[["我已经吃饭了。","Wǒ yǐjīng chī fàn le.","Tôi đã ăn cơm rồi."],["天已经黑了。","Tiān yǐjīng hēi le.","Trời đã tối rồi."]]},{"id":"2-11","l":2,"t":"Phó từ 就 (sớm, ngay)","s":"Thời gian + 就 + Động từ","e":"就 nhấn mạnh sự việc xảy ra sớm, nhanh, hoặc ngay sau đó (\"đã... rồi\", \"liền\").","x":[["他六点就起床了。","Tā liù diǎn jiù qǐchuáng le.","Anh ấy 6 giờ đã dậy rồi."],["我马上就来。","Wǒ mǎshàng jiù lái.","Tôi đến ngay."]]},{"id":"2-12","l":2,"t":"因为……所以……","s":"因为 + Nguyên nhân，所以 + Kết quả","e":"Nối nguyên nhân và kết quả (\"vì... nên...\"). Có thể bỏ một trong hai vế liên từ.","x":[["因为下雨，所以我没去。","Yīnwèi xià yǔ, suǒyǐ wǒ méi qù.","Vì trời mưa nên tôi không đi."],["因为他病了，所以没来上课。","Yīnwèi tā bìng le, suǒyǐ méi lái shàngkè.","Vì anh ấy bị ốm nên không đến lớp."]]},{"id":"2-13","l":2,"t":"虽然……但是……","s":"虽然 + A，但是 + B","e":"Diễn tả quan hệ nhượng bộ (\"tuy... nhưng...\"). 但是 có thể thay bằng 可是.","x":[["虽然很累，但是我很高兴。","Suīrán hěn lèi, dànshì wǒ hěn gāoxìng.","Tuy rất mệt nhưng tôi rất vui."],["虽然汉语很难，但是很有意思。","Suīrán Hànyǔ hěn nán, dànshì hěn yǒu yìsi.","Tuy tiếng Trung khó nhưng rất thú vị."]]},{"id":"2-14","l":2,"t":"Câu hỏi lựa chọn với 还是","s":"A 还是 B？","e":"Dùng trong câu hỏi để đưa ra lựa chọn (\"hay là\"). Không thêm 吗 cuối câu. Câu trần thuật dùng 或者.","x":[["你喝茶还是喝咖啡？","Nǐ hē chá háishi hē kāfēi?","Bạn uống trà hay uống cà phê?"],["你今天去还是明天去？","Nǐ jīntiān qù háishi míngtiān qù?","Bạn đi hôm nay hay ngày mai?"]]},{"id":"2-15","l":2,"t":"Khoảng cách với 离","s":"A + 离 + B + 远 / 近","e":"Diễn tả khoảng cách giữa hai địa điểm hoặc hai thời điểm (\"A cách B...\").","x":[["我家离学校很近。","Wǒ jiā lí xuéxiào hěn jìn.","Nhà tôi cách trường rất gần."],["机场离这儿远吗？","Jīchǎng lí zhèr yuǎn ma?","Sân bay có xa đây không?"]]},{"id":"2-16","l":2,"t":"从……到……","s":"从 + A + 到 + B","e":"Chỉ điểm bắt đầu và kết thúc về không gian hoặc thời gian (\"từ... đến...\").","x":[["从我家到学校要二十分钟。","Cóng wǒ jiā dào xuéxiào yào èrshí fēnzhōng.","Từ nhà tôi đến trường mất 20 phút."],["我从九点到十二点上课。","Wǒ cóng jiǔ diǎn dào shí'èr diǎn shàngkè.","Tôi học từ 9 giờ đến 12 giờ."]]},{"id":"2-17","l":2,"t":"Giới từ 往 chỉ hướng","s":"往 + Phương hướng + Động từ","e":"Chỉ hướng di chuyển của hành động (\"về phía\").","x":[["往前走，就到了。","Wǎng qián zǒu, jiù dào le.","Đi thẳng về phía trước là đến."],["到了路口往右走。","Dàole lùkǒu wǎng yòu zǒu.","Đến ngã tư thì rẽ phải."]]},{"id":"2-18","l":2,"t":"Câu kiêm ngữ với 让","s":"A + 让 + B + Động từ","e":"A bảo, để, khiến B làm việc gì. B vừa là tân ngữ của 让 vừa là chủ ngữ của động từ sau.","x":[["妈妈让我早点儿回家。","Māma ràng wǒ zǎo diǎnr huí jiā.","Mẹ bảo tôi về nhà sớm một chút."],["老师让我们读课文。","Lǎoshī ràng wǒmen dú kèwén.","Thầy giáo bảo chúng tôi đọc bài khóa."]]},{"id":"2-19","l":2,"t":"Lặp lại động từ","s":"Động từ + Động từ　/　Động từ + 一 + Động từ　/　AB + AB","e":"Làm nhẹ ngữ khí, diễn tả hành động ngắn hoặc thử làm (\"thử xem\", \"một chút\").","x":[["你看看。","Nǐ kànkan.","Bạn xem thử đi."],["我们休息休息吧。","Wǒmen xiūxi xiūxi ba.","Chúng ta nghỉ ngơi một chút đi."]]},{"id":"2-20","l":2,"t":"Câu cấm đoán với 别","s":"别 + Động từ (+ 了)","e":"Khuyên hoặc ngăn cản ai đó làm gì (\"đừng\"). Có 了 ở cuối: dừng việc đang làm.","x":[["别说话了。","Bié shuōhuà le.","Đừng nói chuyện nữa."],["别忘了我的生日。","Bié wàngle wǒ de shēngrì.","Đừng quên sinh nhật tôi nhé."]]},{"id":"2-21","l":2,"t":"每……都……","s":"每 + (Lượng từ) + Danh từ + 都 + Động từ","e":"Diễn tả không có ngoại lệ (\"mỗi... đều...\"). 都 thường đi kèm 每.","x":[["我每天都跑步。","Wǒ měi tiān dōu pǎobù.","Ngày nào tôi cũng chạy bộ."],["每个学生都有一本书。","Měi ge xuésheng dōu yǒu yì běn shū.","Mỗi học sinh đều có một quyển sách."]]},{"id":"2-22","l":2,"t":"Bổ ngữ động lượng và thời lượng","s":"Động từ + (了/过) + Số + 次 / 一会儿 / thời gian","e":"Cho biết hành động diễn ra mấy lần hoặc trong bao lâu. Bổ ngữ đứng sau động từ.","x":[["我去过两次北京。","Wǒ qùguo liǎng cì Běijīng.","Tôi đã đến Bắc Kinh hai lần."],["请等一会儿。","Qǐng děng yíhuìr.","Xin đợi một lát."],["我每天睡八个小时。","Wǒ měi tiān shuì bā ge xiǎoshí.","Mỗi ngày tôi ngủ 8 tiếng."]]},{"id":"2-23","l":2,"t":"Hỏi nguyên nhân với 为什么","s":"Chủ ngữ + 为什么 + Động từ…？","e":"Hỏi lý do (\"tại sao\"). Trả lời thường dùng 因为.","x":[["你为什么不去？","Nǐ wèishénme bú qù?","Tại sao bạn không đi?"],["他为什么没来上课？","Tā wèishénme méi lái shàngkè?","Tại sao anh ấy không đến lớp?"]]},{"id":"2-24","l":2,"t":"Tân ngữ đặt trước để nhấn mạnh","s":"Tân ngữ + Chủ ngữ + Động từ + Bổ ngữ","e":"Trong khẩu ngữ, tân ngữ đã biết có thể đưa lên đầu câu làm chủ đề để nhấn mạnh.","x":[["这本书我看完了。","Zhè běn shū wǒ kànwán le.","Quyển sách này tôi đọc xong rồi."],["作业你做好了吗？","Zuòyè nǐ zuòhǎo le ma?","Bài tập bạn làm xong chưa?"]]},{"id":"3-01","l":3,"t":"Câu chữ 把","s":"Chủ ngữ + 把 + Tân ngữ + Động từ + Thành phần khác","e":"Nhấn mạnh việc tác động lên một đối tượng xác định và kết quả của nó. Sau động từ phải có thành phần khác (了, bổ ngữ...), không đứng trơ trọi.","x":[["请把门关上。","Qǐng bǎ mén guānshang.","Làm ơn đóng cửa lại."],["我把作业做完了。","Wǒ bǎ zuòyè zuòwán le.","Tôi đã làm xong bài tập."],["他把手机放在桌子上了。","Tā bǎ shǒujī fàng zài zhuōzi shang le.","Anh ấy đặt điện thoại lên bàn rồi."]]},{"id":"3-02","l":3,"t":"Câu bị động với 被","s":"Đối tượng + 被 + (Người làm) + Động từ + Thành phần khác","e":"Đối tượng chịu tác động đứng đầu câu. Thường dùng cho việc không mong muốn. Người thực hiện có thể bỏ.","x":[["我的手机被他拿走了。","Wǒ de shǒujī bèi tā názǒu le.","Điện thoại của tôi bị anh ấy lấy đi rồi."],["蛋糕被弟弟吃了。","Dàngāo bèi dìdi chī le.","Bánh kem bị em trai ăn mất rồi."]]},{"id":"3-03","l":3,"t":"Bổ ngữ khả năng","s":"Động từ + 得 / 不 + Bổ ngữ kết quả / xu hướng","e":"Diễn tả có thể hay không thể đạt được kết quả: 听得懂 (nghe hiểu được), 吃不完 (ăn không hết).","x":[["我听得懂。","Wǒ tīng de dǒng.","Tôi nghe hiểu được."],["这么多菜，我吃不完。","Zhème duō cài, wǒ chī bu wán.","Nhiều món thế này, tôi ăn không hết."],["黑板上的字你看得见吗？","Hēibǎn shang de zì nǐ kàn de jiàn ma?","Chữ trên bảng bạn có nhìn thấy không?"]]},{"id":"3-04","l":3,"t":"Bổ ngữ xu hướng kép","s":"Động từ + 上/下/进/出/回/过/起 + 来/去","e":"Kết hợp hướng di chuyển và vị trí người nói. Tân ngữ chỉ nơi chốn đặt trước 来/去.","x":[["他走进教室来了。","Tā zǒu jìn jiàoshì lái le.","Anh ấy đi vào lớp học rồi."],["她从楼上跑下来了。","Tā cóng lóu shang pǎo xiàlai le.","Cô ấy từ trên lầu chạy xuống."]]},{"id":"3-05","l":3,"t":"越来越……","s":"Chủ ngữ + 越来越 + Tính từ / Động từ tâm lý","e":"Mức độ tăng dần theo thời gian (\"ngày càng\"). Không thêm 很 sau 越来越.","x":[["天气越来越冷了。","Tiānqì yuèláiyuè lěng le.","Thời tiết ngày càng lạnh."],["我越来越喜欢学汉语了。","Wǒ yuèláiyuè xǐhuan xué Hànyǔ le.","Tôi ngày càng thích học tiếng Trung."]]},{"id":"3-06","l":3,"t":"越……越……","s":"越 + A + 越 + B","e":"B thay đổi theo A (\"càng... càng...\").","x":[["雨越下越大。","Yǔ yuè xià yuè dà.","Mưa càng lúc càng to."],["汉语越学越有意思。","Hànyǔ yuè xué yuè yǒu yìsi.","Tiếng Trung càng học càng thú vị."]]},{"id":"3-07","l":3,"t":"一边……一边……","s":"一边 + Động từ 1，一边 + Động từ 2","e":"Hai hành động diễn ra đồng thời (\"vừa... vừa...\").","x":[["他一边吃饭一边看手机。","Tā yìbiān chī fàn yìbiān kàn shǒujī.","Anh ấy vừa ăn cơm vừa xem điện thoại."],["我们一边走一边聊天。","Wǒmen yìbiān zǒu yìbiān liáotiān.","Chúng tôi vừa đi vừa nói chuyện."]]},{"id":"3-08","l":3,"t":"如果……就……","s":"如果 + Điều kiện，(Chủ ngữ) + 就 + Kết quả","e":"Câu giả thiết (\"nếu... thì...\"). 就 đứng sau chủ ngữ của vế sau.","x":[["如果明天下雨，我们就不去了。","Rúguǒ míngtiān xià yǔ, wǒmen jiù bú qù le.","Nếu ngày mai mưa thì chúng ta không đi nữa."],["如果你有时间，就来我家玩儿吧。","Rúguǒ nǐ yǒu shíjiān, jiù lái wǒ jiā wánr ba.","Nếu bạn có thời gian thì đến nhà tôi chơi nhé."]]},{"id":"3-09","l":3,"t":"只要……就……","s":"只要 + Điều kiện đủ，就 + Kết quả","e":"Chỉ cần đáp ứng điều kiện thì kết quả sẽ xảy ra (\"chỉ cần... là...\").","x":[["只要你努力，就能学好汉语。","Zhǐyào nǐ nǔlì, jiù néng xuéhǎo Hànyǔ.","Chỉ cần bạn cố gắng là có thể học giỏi tiếng Trung."],["只要不下雨，我们就去爬山。","Zhǐyào bú xià yǔ, wǒmen jiù qù pá shān.","Chỉ cần không mưa là chúng ta đi leo núi."]]},{"id":"3-10","l":3,"t":"除了……以外，还/都……","s":"除了 A 以外，还 + B　/　除了 A 以外，都 + …","e":"除了…还/也: ngoài A ra còn B (bổ sung). 除了…都: ngoài A ra thì đều... (loại trừ A).","x":[["除了汉语以外，我还会说英语。","Chúle Hànyǔ yǐwài, wǒ hái huì shuō Yīngyǔ.","Ngoài tiếng Trung ra, tôi còn biết nói tiếng Anh."],["除了他以外，我们都去了。","Chúle tā yǐwài, wǒmen dōu qù le.","Ngoài anh ấy ra, chúng tôi đều đi cả."]]},{"id":"3-11","l":3,"t":"连……都/也……","s":"连 + A + 都/也 + Động từ","e":"Nhấn mạnh trường hợp cực đoan (\"ngay cả... cũng...\").","x":[["他连一个字都没写。","Tā lián yí ge zì dōu méi xiě.","Anh ấy ngay cả một chữ cũng không viết."],["这个问题连孩子都知道。","Zhège wèntí lián háizi dōu zhīdào.","Vấn đề này ngay cả trẻ con cũng biết."]]},{"id":"3-12","l":3,"t":"又……又……","s":"又 + Tính từ/Động từ + 又 + Tính từ/Động từ","e":"Hai tính chất hoặc trạng thái cùng tồn tại (\"vừa... vừa...\"), hai vế cùng sắc thái (cùng tốt hoặc cùng xấu).","x":[["这个苹果又大又甜。","Zhège píngguǒ yòu dà yòu tián.","Quả táo này vừa to vừa ngọt."],["我又累又饿。","Wǒ yòu lèi yòu è.","Tôi vừa mệt vừa đói."]]},{"id":"3-13","l":3,"t":"先……然后……","s":"先 + Việc 1，然后 + Việc 2","e":"Trình bày thứ tự hành động (\"trước... sau đó...\"). Có thể thêm 再 sau 然后.","x":[["我先洗手，然后吃饭。","Wǒ xiān xǐ shǒu, ránhòu chī fàn.","Tôi rửa tay trước, sau đó ăn cơm."],["我们先去银行，然后去超市。","Wǒmen xiān qù yínháng, ránhòu qù chāoshì.","Chúng ta đi ngân hàng trước, sau đó đi siêu thị."]]},{"id":"3-14","l":3,"t":"Cấu trúc nhấn mạnh 是……的","s":"Chủ ngữ + 是 + Thời gian/Nơi chốn/Cách thức + Động từ + 的","e":"Nhấn mạnh thời gian, địa điểm, cách thức... của một việc đã xảy ra. Trong câu khẳng định có thể lược 是.","x":[["你是什么时候来的？","Nǐ shì shénme shíhou lái de?","Bạn đến lúc nào vậy?"],["我是坐飞机来的。","Wǒ shì zuò fēijī lái de.","Tôi đến bằng máy bay."],["这本书是在北京买的。","Zhè běn shū shì zài Běijīng mǎi de.","Quyển sách này mua ở Bắc Kinh."]]},{"id":"3-15","l":3,"t":"一……就……","s":"(Chủ ngữ) + 一 + A，(Chủ ngữ) + 就 + B","e":"B xảy ra ngay sau A, hoặc hễ A là B (\"vừa... là...\", \"hễ... là...\").","x":[["他一回家就睡觉。","Tā yì huí jiā jiù shuìjiào.","Anh ấy vừa về nhà là đi ngủ."],["我一看就明白了。","Wǒ yí kàn jiù míngbai le.","Tôi vừa nhìn là hiểu ngay."]]},{"id":"3-16","l":3,"t":"Câu hỏi phản vấn 不是……吗","s":"不是 + … + 吗？","e":"Câu hỏi dùng để khẳng định điều người nói cho là đúng (\"chẳng phải... sao?\").","x":[["你不是去过北京吗？","Nǐ bú shì qùguo Běijīng ma?","Chẳng phải bạn đã đến Bắc Kinh rồi sao?"],["今天不是星期六吗？","Jīntiān bú shì xīngqīliù ma?","Chẳng phải hôm nay là thứ Bảy sao?"]]},{"id":"3-17","l":3,"t":"Phó từ 才 (muộn, chậm)","s":"Thời gian + 才 + Động từ","e":"才 nhấn mạnh sự việc xảy ra muộn hoặc khó khăn hơn mong đợi (\"mới\"). Câu với 才 không dùng 了 ở cuối.","x":[["他十点才起床。","Tā shí diǎn cái qǐchuáng.","Anh ấy 10 giờ mới dậy."],["我等了一个小时他才来。","Wǒ děngle yí ge xiǎoshí tā cái lái.","Tôi đợi một tiếng anh ấy mới đến."]]},{"id":"3-18","l":3,"t":"So sánh có bổ ngữ số lượng","s":"A + 比 + B + Tính từ + Số lượng","e":"Cho biết chênh lệch cụ thể giữa A và B; số lượng đứng sau tính từ.","x":[["他比我大两岁。","Tā bǐ wǒ dà liǎng suì.","Anh ấy lớn hơn tôi hai tuổi."],["这件衣服比那件贵一百块。","Zhè jiàn yīfu bǐ nà jiàn guì yìbǎi kuài.","Bộ này đắt hơn bộ kia 100 tệ."]]},{"id":"3-19","l":3,"t":"Thời lượng với hai chữ 了","s":"Động từ + 了 + Thời lượng + 了","e":"Hành động bắt đầu từ trước và vẫn còn tiếp tục đến hiện tại. Nếu có tân ngữ: lặp động từ, như 学汉语学了两年了.","x":[["我学汉语学了两年了。","Wǒ xué Hànyǔ xuéle liǎng nián le.","Tôi học tiếng Trung được hai năm rồi."],["我们等了半个小时了。","Wǒmen děngle bàn ge xiǎoshí le.","Chúng tôi đã đợi nửa tiếng rồi."]]},{"id":"3-20","l":3,"t":"对……感兴趣","s":"A + 对 + B + (很) 感兴趣","e":"A có hứng thú với B. Phủ định: 对……不感兴趣.","x":[["我对中国文化很感兴趣。","Wǒ duì Zhōngguó wénhuà hěn gǎn xìngqù.","Tôi rất hứng thú với văn hóa Trung Quốc."],["他对音乐不感兴趣。","Tā duì yīnyuè bù gǎn xìngqù.","Anh ấy không hứng thú với âm nhạc."]]},{"id":"3-21","l":3,"t":"跟……一样","s":"A + 跟 + B + 一样 (+ Tính từ)","e":"So sánh ngang bằng (\"A giống B\", \"A... bằng B\"). Phủ định: 跟……不一样.","x":[["我跟你一样高。","Wǒ gēn nǐ yíyàng gāo.","Tôi cao bằng bạn."],["他的想法跟我的不一样。","Tā de xiǎngfǎ gēn wǒ de bù yíyàng.","Suy nghĩ của anh ấy không giống của tôi."]]},{"id":"3-22","l":3,"t":"Câu tồn hiện","s":"Nơi chốn + Động từ + 着 / 了 + Người/Vật","e":"Mô tả ở đâu đó đang có, xuất hiện hoặc biến mất người/vật nào.","x":[["墙上挂着一张地图。","Qiáng shang guàzhe yì zhāng dìtú.","Trên tường treo một tấm bản đồ."],["前面走过来一个人。","Qiánmiàn zǒu guòlai yí ge rén.","Phía trước có một người đi tới."]]}];
+  const HSK1 = [["爱","ài","Động từ","Yêu"],["吧","ba","Trợ từ","Nhé, đi; chắc hẳn, chứ (suy đoán)"],["八","bā","Số từ","Số 8"],["爸爸","bàba","Danh từ","Bố, ba"],["百","bǎi","Số từ","Trăm, một trăm"],["白天","báitiān","Danh từ","Ban ngày"],["半","bàn","Số từ","Một nửa, rưỡi"],["包子","bāozi","Danh từ","Bánh bao"],["北京","Běijīng","Danh từ","Bắc Kinh"],["杯子","bēizi","Danh từ","Cái cốc"],["本","běn","Lượng từ","Cuốn, quyển"],["边","biān","Danh từ/Hậu tố","Ven, bờ, lề; bên, đằng, phía"],["病","bìng","Danh từ/Động từ","Bệnh, bệnh tật; Bị ốm, bị bệnh"],["不","bù","Phó từ","Không"],["不客气","bú kèqi","Trợ từ","Đừng khách khí, đừng ngại"],["不要","búyào","Phó từ","Không, đừng"],["菜","cài","Danh từ","Món ăn, thức ăn"],["茶","chá","Danh từ","Trà"],["唱","chàng","Động từ","Hát"],["超市","chāoshì","Danh từ","Siêu thị"],["车","chē","Danh từ","Xe"],["吃","chī","Động từ","Ăn"],["穿","chuān","Động từ","Mặc, mang, đeo"],["出租车","chūzūchē","Danh từ","Xe taxi"],["大","dà","Tính từ","To, lớn"],["打电话","dǎ diànhuà","Động từ","Gọi điện thoại"],["大家","dàjiā","Đại từ","Mọi người, cả nhà"],["到","dào","Động từ","Đi, đến, đi đến"],["大学","dàxué","Danh từ","Đại học"],["大学生","dàxuéshēng","Danh từ","Sinh viên, sinh viên đại học"],["的","de","Trợ từ","Của"],["第","dì","Tiền tố","Thứ, thứ tự, thứ hạng"],["店","diàn","Danh từ","Tiệm, cửa hàng, cửa hiệu"],["点","diǎn","Danh từ","Giờ"],["电话","diànhuà","Danh từ","Điện thoại"],["电脑","diànnǎo","Danh từ","Máy tính"],["电视","diànshì","Danh từ","Ti vi"],["电影","diànyǐng","Danh từ","Phim điện ảnh"],["电影院","diànyǐngyuàn","Danh từ","Rạp chiếu phim"],["弟弟","dìdi","Danh từ","Em trai"],["东西","dōngxi","Danh từ","Đồ vật"],["都","dōu","Phó từ","Đều"],["读","dú","Động từ","Đọc"],["对","duì","Tính từ/Giới từ","(tính từ) đúng, chính xác; (giới từ) về, với, đối với"],["对不起","duìbuqǐ","Động từ","Xin lỗi"],["多","duō","Tính từ","Nhiều"],["多少","duōshao","Đại từ","Bao nhiêu"],["读书","dúshū","Động từ","Đọc sách, học bài, đi học"],["二","èr","Số từ","Số 2"],["儿子","érzi","Danh từ","Con trai"],["饭","fàn","Danh từ","Cơm"],["饭店","fàndiàn","Danh từ","Nhà hàng, quán ăn"],["房间","fángjiān","Danh từ","Phòng, căn phòng"],["非常","fēicháng","Phó từ","Rất, vô cùng, cực kỳ"],["飞机","fēijī","Danh từ","Máy bay"],["分","fēn","Lượng từ","Phút (thời gian), xu (đơn vị tiền tệ)"],["分钟","fēnzhōng","Lượng từ","Phút"],["高兴","gāoxìng","Tính từ/Động từ","Vui vẻ, hào hứng"],["个","gè","Lượng từ","Cái"],["歌","gē","Danh từ","Bài hát"],["哥哥","gēge","Danh từ","Anh trai"],["给","gěi","Động từ","Cho, đưa cho, trao cho"],["公司","gōngsī","Danh từ","Công ty"],["工作","gōngzuò","Danh từ/Động từ","Công việc, Làm việc"],["狗","gǒu","Danh từ","Con chó"],["贵","guì","Tính từ","Đắt"],["国","guó","Danh từ","Nước, quốc gia"],["还","hái","Phó từ","Vẫn, còn"],["孩子","háizi","Danh từ","Trẻ em, bọn trẻ, đứa bé, con cái"],["汉语","Hànyǔ","Danh từ","Tiếng Trung"],["汉字","Hànzì","Danh từ","Chữ Hán, Hán tự"],["号","hào","Danh từ","Ngày"],["好","hǎo","Tính từ","Tốt, ổn, khỏe, được"],["好吃","hǎochī","Tính từ","Ngon, ngon miệng"],["好看","hǎokàn","Tính từ","Đẹp, xinh; hay, thú vị"],["好听","hǎotīng","Tính từ","Hay, dễ nghe (âm thanh)"],["好玩儿","hǎowánr","Tính từ","Hay, thú vị, thích thú"],["和","hé","Liên từ","Và"],["喝","hē","Động từ","Uống"],["很","hěn","Phó từ","Rất"],["后","hòu","Danh từ","Sau, phía sau"],["后面","hòumiàn","Danh từ","Phía sau"],["回","huí","Động từ","Quay lại, trở về"],["会","huì","Trợ động từ","Sẽ"],["火车","huǒchē","Danh từ","Xe lửa, tàu hỏa"],["几","jǐ","Số từ","Mấy, vài"],["家","jiā","Danh từ","Nhà, Gia đình"],["见","jiàn","Động từ","Thấy, trông thấy, nhìn thấy"],["件","jiàn","Lượng từ","Chiếc, kiện, cái, bộ"],["叫","jiào","Động từ","Gọi"],["饺子","jiǎozi","Danh từ","Bánh chẻo, sủi cảo, há cảo"],["家人","jiārén","Danh từ","Gia đình, người nhà, thành viên trong gia đình"],["鸡蛋","jīdàn","Danh từ","Trứng gà"],["今天","jīntiān","Danh từ","Hôm nay"],["九","jiǔ","Số từ","Số 9"],["觉得","juéde","Động từ","Thấy, cảm thấy, thấy rằng, cho rằng, nghĩ rằng"],["开","kāi","Động từ","Mở"],["开车","kāichē","Động từ","Lái xe, chạy xe, điều khiển xe"],["看","kàn","Động từ","Xem, Nhìn"],["看见","kàn jiàn","Động từ","Nhìn thấy"],["看病","kànbìng","Động từ","Khám bệnh, đi khám bệnh"],["课","kè","Danh từ","Giờ học, giờ lên lớp; tiết học"],["可以","kěyǐ","Động từ/Tính từ","Có thể; Tốt, được, ổn"],["口","kǒu","Danh từ/Lượng từ","(Danh) Miệng; (Lượng) Nhân khẩu (dùng cho thành viên gia đình)"],["块","kuài","Lượng từ","Đồng (tiền); Miếng"],["来","lái","Động từ","Đến, tới"],["老师","lǎoshī","Danh từ","Giáo viên, thầy cô"],["了","le","Trợ từ","Đã, rồi (biểu thị sự hoàn thành của hành động)"],["冷","lěng","Tính từ","Lạnh"],["里","li","Danh từ","Phía trong, bên trong"],["两","liǎng","Số từ","Hai"],["零","líng","Số từ","Số 0"],["六","liù","Số từ","Số 6"],["吗","ma","Trợ từ","Không, ư, à (dùng ở cuối câu để hỏi)"],["卖","mài","Động từ","Bán"],["买","mǎi","Động từ","Mua"],["妈妈","māma","Danh từ","Mẹ, má"],["忙","máng","Tính từ","Bận, bận rộn"],["猫","māo","Danh từ","Con mèo"],["没有","méi(yǒu)","Động từ/Phó từ","(Động) Không có (sở hữu); (Phó) Không, chưa (làm gì)"],["没关系","méi guānxi","Động từ/Phó từ","Không sao"],["妹妹","mèimei","Danh từ","Em gái"],["没事","méishì","Động từ","Ổn, không sao"],["们","men","Hậu tố","Chúng, các, bọn (chỉ số nhiều)"],["面包","miànbāo","Danh từ","Bánh mì"],["面条儿","miàntiáor","Danh từ","Mì, mì sợi"],["米饭","mǐfàn","Danh từ","Cơm"],["明年","míngnián","Danh từ","Năm sau"],["明天","míngtiān","Danh từ","Ngày mai"],["名字","míngzi","Danh từ","Tên"],["那","nà","Đại từ","Đó, kia"],["哪","nǎ","Đại từ","Nào (dùng trong câu hỏi)"],["那边","nàbiān","Đại từ","Đằng kia, bên đó"],["那个","nàge","Đại từ","Cái kia, cái đó"],["哪个","nǎge","Đại từ","Cái nào (dùng trong câu hỏi)"],["那里","nàlǐ","Đại từ","Chỗ đó, nơi đó, nơi ấy, chỗ kia"],["哪里","nǎlǐ","Đại từ","Chỗ nào, nơi nào, đâu"],["男","nán","Tính từ","Nam (giới tính)"],["男朋友","nánpéngyou","Danh từ","Bạn trai"],["那儿","nàr","Đại từ","Chỗ đó, nơi đó, nơi ấy, chỗ kia"],["哪儿","nǎr","Đại từ","Chỗ nào, nơi nào, đâu"],["那些","nàxiē","Đại từ","Những... ấy; những... đó; những... kia (Biểu thị số lượng không xác định)"],["哪些","nǎxiē","Đại từ","Những cái nào, người nào (dùng trong câu hỏi)"],["呢","ne","Trợ từ","Nhé, nhỉ, cơ, đó, đấy … thì sao? (hỏi rút gọn); Đâu, ở đâu? (hỏi vị trí)"],["能","néng","Trợ động từ","Có thể"],["你","nǐ","Đại từ","Bạn, cậu, anh, chị (đối phương)"],["你好","nǐ hǎo","Động từ","Xin chào"],["年","nián","Danh từ","Năm"],["你们","nǐmen","Đại từ","Các bạn, các anh, các chị,..."],["您","nín","Đại từ","Ngài, ông, bà (kính trọng, lịch sự)"],["牛奶","niúnǎi","Danh từ","Sữa bò"],["女","nǚ","Tính từ","Nữ (giới tính)"],["女儿","nǚér","Danh từ","Con gái"],["女朋友","nǚpéngyou","Danh từ","Bạn gái"],["女士","nǚshì","Danh từ","Quý bà, quý cô (tôn trọng, lịch sự)"],["朋友","péngyou","Danh từ","Bạn, bạn bè"],["便宜","piányi","Tính từ","Rẻ"],["漂亮","piàoliang","Tính từ","Xinh đẹp"],["苹果","píngguǒ","Danh từ","Quả táo"],["七","qī","Số từ","Số 7"],["钱","qián","Danh từ","Tiền"],["前","qián","Danh từ","Trước, phía trước; Trước khi (làm gì); trước (mấy giờ)"],["前面","qiánmiàn","Danh từ","Phía trước"],["起床","qǐchuáng","Động từ","Thức dậy"],["请","qǐng","Động từ","Xin, xin hãy, mời (yêu cầu lịch sự)"],["请问","qǐngwèn","Động từ","Xin hỏi, cho hỏi"],["去","qù","Động từ","Đi"],["去年","qùnián","Danh từ","Năm ngoái"],["热","rè","Tính từ","Nóng"],["人","rén","Danh từ","Người"],["认识","rènshi","Động từ","Quen, biết"],["三","sān","Số từ","Số 3"],["上","shang","Danh từ/Động từ","(Danh) Trên, phía trên; (Động) Lên, đi lên"],["上班","shàngbān","Động từ","Đi làm"],["商店","shāngdiàn","Danh từ","Cửa hàng, tiệm"],["上课","shàngkè","Động từ","Lên lớp, vào học, đi học"],["上午","shàngwǔ","Danh từ","Buổi sáng"],["上学","shàngxué","Động từ","Đi học"],["少","shǎo","Động từ/Tính từ","(Tính từ) Ít; (Động từ) Thiếu"],["谁","shéi","Đại từ","Ai"],["生病","shēngbìng","Động từ","Bị ốm, bị bệnh"],["什么","shénme","Đại từ","Cái gì?"],["十","shí","Số từ","Số 10"],["是","shì","Động từ","Là"],["事","shì","Danh từ","Việc, sự việc, chuyện"],["时候","shíhou","Danh từ","Lúc, khi"],["时间","shíjiān","Danh từ","Thời gian"],["手机","shǒujī","Danh từ","Điện thoại di động"],["书","shū","Danh từ","Sách"],["书店","shūdiàn","Danh từ","Nhà sách, hiệu sách"],["睡","shuì","Động từ","Ngủ"],["水","shuǐ","Danh từ","Nước"],["水果","shuǐguǒ","Danh từ","Hoa quả"],["睡觉","shuìjiào","Động từ","Ngủ"],["说","shuō","Động từ","Nói"],["四","sì","Số từ","Số 4"],["岁","suì","Lượng từ","Tuổi"],["他","tā","Đại từ","Cậu ấy, anh ấy, ông ấy,..."],["她","tā","Đại từ","Cô ấy, chị ấy, bà ấy,..."],["它","tā","Đại từ","Nó (chỉ sự vật, con vật)"],["太","tài","Phó từ","Quá, lắm"],["他们","tāmen","Đại từ","Họ, bọn họ"],["它们","tāmen","Đại từ","Chúng, chúng nó"],["她们","tāmen","Đại từ","Họ, các chị ấy, các cô ấy,... (dùng cho nữ giới)"],["天","tiān","Danh từ/Lượng từ","(Danh từ) Trời, bầu trời; (Lượng từ) Ngày"],["天气","tiānqì","Danh từ","Thời tiết"],["听","tīng","Động từ","Nghe"],["听见","tīngjiàn","Động từ","Nghe thấy"],["同学","tóngxué","Danh từ","Bạn học"],["外","wài","Danh từ","Bên ngoài"],["外边","wàibian","Danh từ","Ngoài, bên ngoài, mặt ngoài"],["玩","wán","Động từ","Chơi, chơi đùa"],["晚","wǎn","Tính từ","Muộn"],["晚饭","wǎnfàn","Danh từ","Cơm tối, bữa tối"],["晚上","wǎnshang","Danh từ","Buổi tối"],["喂","wèi","Thán từ","Alo, Này"],["问","wèn","Động từ","Hỏi"],["问题","wèntí","Danh từ","Vấn đề, câu hỏi"],["我","wǒ","Đại từ","Tôi"],["我们","wǒmen","Đại từ","Chúng tôi, chúng ta"],["五","wǔ","Số từ","Số 5"],["午饭","wǔfàn","Danh từ","Bữa trưa, cơm trưa"],["下","xià","Danh từ/Động từ","(Danh từ): bên dưới, phía dưới; (Động từ): xuống, hạ"],["下雨","xià yǔ","Động từ","Mưa"],["下班","xiàbān","Động từ","Tan ca, tan làm, hết giờ làm"],["下课","xiàkè","Động từ","Tan học, hết giờ học"],["想","xiǎng","Động từ","Muốn, nhớ, nghĩ"],["先生","xiānsheng","Danh từ","Ông, ngài"],["现在","xiànzài","Danh từ","Hiện tại, bây giờ, hiện nay"],["小","xiǎo","Tính từ","Bé, nhỏ"],["小姐","xiǎojiě","Danh từ","Quý cô, Tiểu thư"],["小朋友","xiǎopéngyǒu","Danh từ","Trẻ em, bạn nhỏ"],["小时","xiǎoshí","Danh từ","Tiếng/giờ (đồng hồ)"],["小学","xiǎoxué","Danh từ","Tiểu học, bậc tiểu học"],["小学生","xiǎoxuéshēng","Danh từ","Học sinh tiểu học"],["下午","xiàwǔ","Danh từ","Buổi chiều"],["写","xiě","Động từ","Viết"],["些","xiē","Lượng từ","Một ít, vài"],["谢谢","xièxie","Động từ","Cảm ơn"],["喜欢","xǐhuan","Động từ","Thích"],["新","xīn","Tính từ","Mới"],["星期","xīngqī","Danh từ","Thứ, Tuần"],["星期日","xīngqīrì","Danh từ","Chủ nhật"],["星期天","xīngqītiān","Danh từ","Chủ nhật"],["休息","xiūxi","Động từ","Nghỉ ngơi"],["学","xué","Động từ","Học"],["雪","xuě","Danh từ","Tuyết"],["学生","xuéshēng","Danh từ","Học sinh"],["学习","xuéxí","Động từ","Học tập"],["学校","xuéxiào","Danh từ","Trường học"],["要","yào","Động từ","Muốn, cần, phải"],["也","yě","Phó từ","Cũng"],["一","yī","Số từ","Số 1"],["一半","yíbàn","Số từ","Một nửa"],["一点儿","yìdiǎnr","Số lượng từ","Một ít, một chút"],["衣服","yīfu","Danh từ","Quần áo"],["医生","yīshēng","Danh từ","Bác sĩ"],["一下","yíxià","Số lượng từ","Một tý, một lúc, thử xem, một cái"],["一些","yìxiē","Số lượng từ","Một vài, một số, một phần (chỉ số lượng không xác định)"],["医院","yīyuàn","Danh từ","Bệnh viện"],["椅子","yǐzi","Danh từ","Cái ghế"],["有","yǒu","Động từ","Có"],["有一点儿","yǒu(yì)diǎnr","Phó từ","Hơi, một chút"],["有的","yǒude","Đại từ","Có cái, có những"],["有些","yǒuxiē","Đại từ","Một chút, một vài, một số"],["雨","yǔ","Danh từ","Mưa"],["元","yuán","Lượng từ","(đơn vị tiền tệ) đồng"],["月","yuè","Danh từ","Tháng"],["在","zài","Động từ/Giới từ/Phó từ","(Động từ) sinh sống, tồn tại; (Giới từ) đang, ở, vào; (Phó từ): đang"],["再","zài","Phó từ","Lại, lần nữa, hãy, sẽ, hẵng"],["再见","zàijiàn","Động từ","Tạm biệt, hẹn gặp lại"],["早饭","zǎofàn","Danh từ","Bữa sáng"],["早上","zǎoshang","Danh từ","Buổi sáng sớm"],["怎么","zěnme","Đại từ","Sao, làm sao, thế nào (tính chất, tình hình, phương thức, nguyên nhân,...)"],["怎么样","zěnmeyàng","Đại từ","Thế nào, như thế nào (chỉ tính chất, tình trạng, cách thức...)"],["找","zhǎo","Động từ","Tìm"],["这","zhè","Đại từ","Đây, này"],["这边","zhèbiān","Đại từ","Ở đây, bên này, chỗ này, phía này (cách người nói ở khoảng cách khá gần)"],["这个","zhège","Đại từ","Cái này, vật này, việc này"],["这里","zhèlǐ","Đại từ","Ở đây, nơi này, nơi đây, tại đây"],["真","zhēn","Phó từ","Thật, quả là"],["正在","zhèngzài","Phó từ","Đang"],["这儿","zhèr","Đại từ","Chỗ này, ở đây"],["这些","zhèxiē","Đại từ","Những thứ này, những điều này"],["只","zhī","Lượng từ","(được dùng cho động vật) con"],["知道","zhīdào","Động từ","Biết"],["中国","Zhōngguó","Danh từ","Trung Quốc"],["中文","Zhōngwén","Danh từ","Tiếng Trung Quốc"],["中午","zhōngwǔ","Danh từ","Buổi trưa"],["中学","zhōngxué","Danh từ","Trung học"],["中学生","zhōngxuéshēng","Danh từ","Học sinh trung học"],["住","zhù","Động từ","Ở tại, sống tại"],["桌子","zhuōzi","Danh từ","Cái bàn"],["字","zì","Danh từ","Chữ"],["坐","zuò","Động từ","Ngồi"],["做","zuò","Động từ","Làm"],["做饭","zuòfàn","Động từ","Nấu cơm, nấu ăn"],["昨天","zuótiān","Danh từ","Hôm qua"]];
+  const POS_BASE = ['Danh từ','Động từ','Tính từ','Đại từ','Phó từ','Số từ','Lượng từ','Số lượng từ','Trợ từ','Trợ động từ','Giới từ','Liên từ','Thán từ','Tiền tố','Hậu tố','Cụm từ'];
+  const SAMPLE = [
+    {hanzi:'你好', pinyin:'nǐ hǎo', pos:'Động từ', meaning:'xin chào'},
+    {hanzi:'谢谢', pinyin:'xièxie', pos:'Động từ', meaning:'cảm ơn'},
+    {hanzi:'学习', pinyin:'xuéxí', pos:'Động từ', meaning:'học tập'},
+    {hanzi:'朋友', pinyin:'péngyou', pos:'Danh từ', meaning:'bạn bè'},
+    {hanzi:'水',   pinyin:'shuǐ',   pos:'Danh từ', meaning:'nước'}
+  ];
+  const HAN_RE = /[㐀-䶿一-鿿豈-﫿]/g;
+  const $ = id => document.getElementById(id);
+
+  // ---------- Storage ----------
+  function newWord(w){
+    return {id: Date.now().toString(36)+Math.random().toString(36).slice(2,7),
+      hanzi:w.hanzi, pinyin:w.pinyin||'', pos:w.pos||'', tag:w.tag||'', meaning:w.meaning||'',
+      correct:0, wrong:0, strokesOk:0, strokesBad:0, last:null, u:Date.now()};
+  }
+  function load(){
+    try{
+      const raw = localStorage.getItem(LS_KEY);
+      if(raw){ const d = JSON.parse(raw); if(d && Array.isArray(d.words)) return d; }
+    }catch(e){}
+    return {words: SAMPLE.map(newWord), settings:{showPinyin:false, order:'random', strict:'1'}, sessions:0};
+  }
+  let db = load();
+  db.settings = Object.assign({showPinyin:false, order:'random', strict:'1', deck:'all', pos:'all', size:'20', lastDeck:'__none__'}, db.settings||{});
+  if(db.settings.deck==='mine') db.settings.deck='__none__';
+  db.tomb = db.tomb || {};
+  function touch(w){ if(w) w.u = Date.now(); }
+  function saveLocal(){
+    try{ localStorage.setItem(LS_KEY, JSON.stringify(db)); }
+    catch(e){ toast('Không lưu được vào LocalStorage'); }
+  }
+  function save(){ saveLocal(); schedulePush(); }
+  save();
+
+  // ---------- Helpers ----------
+  function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  let toastT;
+  function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2200); }
+  // Stroke data loader: try fetch first, fall back to jsDelivr ESM (script-based) when fetch is blocked
+  const DATA_BASE='https://cdn.jsdelivr.net/npm/hanzi-writer-data@2.0/';
+  const dataCache={};
+  function loadCharData(ch, onLoad, onError){
+    if(dataCache[ch]){ onLoad(dataCache[ch]); return; }
+    const url = DATA_BASE + encodeURIComponent(ch) + '.json';
+    fetch(url).then(r=> r.ok ? r.json() : Promise.reject(new Error('http '+r.status)))
+      .catch(()=> import(url + '/+esm').then(m=> m.default || m))
+      .then(d=>{ if(!d || !d.strokes) throw new Error('no data'); dataCache[ch]=d; onLoad(d); })
+      .catch(err=>{ onError && onError(err); });
+  }
+  function prefetchChars(chars, onProgress){
+    const list = Array.from(new Set(chars)); let done=0, fail=0, i=0;
+    return new Promise(resolve=>{
+      if(!list.length) return resolve({done:0,fail:0,total:0});
+      const next=()=>{
+        if(i>=list.length) return;
+        const ch=list[i++];
+        loadCharData(ch, ()=>{done++; fin();}, ()=>{fail++; fin();});
+      };
+      const fin=()=>{ onProgress && onProgress(done+fail, list.length); if(done+fail===list.length) resolve({done,fail,total:list.length}); else next(); };
+      for(let k=0;k<4;k++) next();
+    });
+  }
+  function wordChars(){ return db.words.flatMap(w=>Array.from(w.hanzi)); }
+  let cFn=null;
+  function askConfirm(msg, fn){ $('cMsg').textContent=msg; cFn=fn; show('cModal',true); }
+  function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+  function show(id,on){ $(id).classList.toggle('hidden', !on); }
+  function libOk(){
+    if(typeof HanziWriter === 'undefined'){ toast('Chưa tải được Hanzi Writer, hãy kiểm tra kết nối mạng'); return false; }
+    return true;
+  }
+
+  // ---------- Tabs ----------
+  document.querySelectorAll('nav button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active', x===b));
+      ['practice','grammar','translate','speak','vocab','stats'].forEach(t=>show('tab-'+t, t===b.dataset.tab));
+      if(b.dataset.tab!=='speak') stopRec();
+      if(b.dataset.tab==='vocab') renderVocab();
+      if(b.dataset.tab==='stats'){ renderStats(); renderSkillStats(); }
+      if(b.dataset.tab==='grammar') renderGrammar();
+      if(b.dataset.tab==='translate') renderTrSetup();
+      if(b.dataset.tab==='speak') renderSpSetup();
+      if(b.dataset.tab==='practice') renderStartInfo();
+    });
+  });
+
+  // ---------- Vocabulary ----------
+  function addWord(hanzi, pinyin, meaning, silent, pos, tag){
+    const h = (hanzi.match(HAN_RE)||[]).join('');
+    if(!h){ if(!silent) toast('Hãy nhập ít nhất một chữ Hán'); return false; }
+    if(!meaning.trim()){ if(!silent) toast('Hãy nhập nghĩa tiếng Việt'); return false; }
+    if(db.words.some(w=>w.hanzi===h)){ if(!silent) toast('"'+h+'" đã có trong danh sách'); return false; }
+    const nw = newWord({hanzi:h, pinyin:pinyin.trim(), meaning:meaning.trim(), pos:(pos||'').trim(), tag:tag||''});
+    if(db.tomb[h]) nw.u = Math.max(nw.u, db.tomb[h]+1);
+    db.words.push(nw);
+    delete db.tomb[h];
+    return true;
+  }
+  $('addBtn').addEventListener('click', ()=>{
+    const dk = chosenDeck('inDeck','inDeckNew'); if(dk===null) return;
+    if(addWord($('inHanzi').value, $('inPinyin').value, $('inMeaning').value, false, $('inPos').value, dk)){
+      if($('inDeck').value==='__new__'){ $('inDeckNew').value=''; db.settings.lastDeck=dk||'__none__'; }
+      save(); renderVocab(); toast('Đã thêm từ');
+      if(typeof HanziWriter!=='undefined') prefetchChars(Array.from(db.words[db.words.length-1].hanzi));
+      $('inHanzi').value=$('inPinyin').value=$('inMeaning').value=$('inPos').value=''; $('inHanzi').focus();
+    }
+  });
+  ['inHanzi','inPinyin','inPos','inMeaning'].forEach(id=>$(id).addEventListener('keydown',e=>{ if(e.key==='Enter') $('addBtn').click(); }));
+  $('bulkBtn').addEventListener('click', ()=>{
+    const lines = $('bulkIn').value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+    if(!lines.length){ toast('Hãy dán danh sách từ'); return; }
+    const dk = chosenDeck('bulkDeck','bulkDeckNew'); if(dk===null) return;
+    let ok=0, skip=0, dup=0;
+    lines.forEach(l=>{
+      const p = l.split(/\s*[-–—|\t]\s*/);
+      if(p.length<2){ skip++; return; }
+      let pinyin='', pos='', meaning;
+      if(p.length>=4 && isPos(p[2])){ pinyin=p[1]; pos=p[2]; meaning=p.slice(3).join(' - '); }
+      else if(p.length>=3){ pinyin=p[1]; meaning=p.slice(2).join(' - '); }
+      else meaning=p[1];
+      const h=(p[0].match(HAN_RE)||[]).join('');
+      if(h && db.words.some(w=>w.hanzi===h)){ dup++; return; }
+      addWord(p[0], pinyin, meaning, true, pos, dk) ? ok++ : skip++;
+    });
+    if($('bulkDeck').value==='__new__'){ $('bulkDeckNew').value=''; }
+    db.settings.lastDeck = dk || '__none__';
+    save(); renderVocab(); prefetchChars(wordChars());
+    toast('Đã thêm '+ok+' từ vào '+deckLabel(dk)+(dup?(', '+dup+' từ đã có (bỏ qua)'):'')+(skip?(', '+skip+' dòng lỗi'):''));
+    if(ok) $('bulkIn').value='';
+  });
+  $('seedBtn').addEventListener('click', ()=>{
+    let n=0; SAMPLE.forEach(s=>{ if(addWord(s.hanzi,s.pinyin,s.meaning,true,s.pos)) n++; });
+    save(); renderVocab(); toast(n?('Đã thêm '+n+' từ mẫu'):'Các từ mẫu đã có sẵn');
+  });
+  $('clearBtn').addEventListener('click', ()=>{
+    if(!db.words.length) return;
+    askConfirm('Xóa toàn bộ '+db.words.length+' từ và thống kê của chúng?', ()=>{ const t=Date.now(); db.words.forEach(w=>{ db.tomb[w.hanzi]=t; }); db.words=[]; save(); renderVocab(); });
+  });
+  $('vList').addEventListener('click', e=>{
+    const b = e.target.closest('button[data-del]'); if(!b) return;
+    const w = db.words.find(x=>x.id===b.dataset.del); if(!w) return;
+    askConfirm('Xóa từ "'+w.hanzi+'"?', ()=>{ db.tomb[w.hanzi]=Date.now(); db.words = db.words.filter(x=>x.id!==w.id); save(); renderVocab(); });
+  });
+  function isPos(t){
+    t=(t||'').trim().toLowerCase(); if(!t) return false;
+    return t.split('/').every(x=>POS_BASE.some(b=>b.toLowerCase()===x.trim()) || /^(n|v|adj|adv|pron|num|m|prep|conj|part|int|aux)\.?$/.test(x.trim()));
+  }
+  function posParts(w){ return (w.pos||'').split('/').map(x=>x.trim().toLowerCase()).filter(Boolean); }
+  function fold(t){ return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'d').toLowerCase(); }
+  function renderVocab(){
+    $('vCount').textContent = db.words.length;
+    renderDecks();
+    const W = shownWords(), q = $('vSearch').value.trim();
+    const filtered = q || $('vDeck').value!=='all';
+    $('vShown').textContent = filtered ? ('Đang hiện '+W.length+' / '+db.words.length+' từ') : '';
+    $('moveBtn').disabled = $('delShownBtn').disabled = !W.length;
+    $('vList').innerHTML = W.length ? W.map(w=>
+      '<li><span class="h hz">'+esc(w.hanzi)+'</span><div class="info"><div class="p">'+esc(w.pinyin||'—')+(w.pos?'<span class="pos">'+esc(w.pos)+'</span>':'')+(w.tag?'<span class="tag">'+esc(w.tag)+'</span>':'')+'</div><div class="m">'+esc(w.meaning)+'</div></div>'+
+      '<span class="muted" title="đúng / sai">'+w.correct+'✓ '+w.wrong+'✗</span>'+
+      '<button class="btn small danger" data-del="'+w.id+'" aria-label="Xóa">✕</button></li>'
+    ).join('') : '<li class="muted">'+(q?'Không tìm thấy từ phù hợp.':'Danh sách đang trống. Hãy thêm từ ở trên.')+'</li>';
+    renderPosOptions();
+  }
+  $('vSearch').addEventListener('input', renderVocab);
+  $('vDeck').addEventListener('change', renderVocab);
+  function shownWords(){
+    const raw=$('vSearch').value.trim(), q=fold(raw), d=$('vDeck').value||'all';
+    return db.words.filter(w=> (d==='all' || (d==='__none__' ? !w.tag : w.tag===d)) &&
+      (!q || w.hanzi.includes(raw) || fold(w.pinyin+' '+w.meaning+' '+(w.pos||'')).includes(q)));
+  }
+  // ---------- Decks ----------
+  function deckNames(){ return [...new Set(db.words.map(w=>w.tag).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi',{numeric:true})); }
+  function deckLabel(t){ return t ? ('deck "'+t+'"') : '"Chưa phân loại"'; }
+  function fillSelect(sel, opts, cur){
+    sel.innerHTML = opts.map(([v,t])=>'<option value="'+esc(v)+'">'+esc(t)+'</option>').join('');
+    sel.value = opts.some(o=>o[0]===cur) ? cur : opts[0][0];
+  }
+  function renderDecks(){
+    const names = deckNames(), cnt = t => db.words.filter(w=>(w.tag||'')===t).length;
+    const none = cnt('');
+    const deckOpts = names.map(n=>[n, n+' ('+cnt(n)+')']);
+    const noneOpt = ['__none__','Chưa phân loại ('+none+')'];
+    const pickOpts = deckOpts.concat([noneOpt, ['__new__','+ Tạo deck mới…']]);
+    ['inDeck','bulkDeck'].forEach(id=>{ let keep=$(id).value; if(!keep || (keep==='__new__' && !$(id+'New').value.trim())) keep=db.settings.lastDeck; fillSelect($(id), pickOpts, keep); toggleNew(id); });
+    fillSelect($('vDeck'), [['all','Tất cả deck']].concat(deckOpts, none?[noneOpt]:[]), $('vDeck').value||'all');
+    fillSelect($('deckSel'), [['all','Tất cả ('+db.words.length+')']].concat(deckOpts, none?[noneOpt]:[]), db.settings.deck);
+    $('deckDl').innerHTML = names.map(n=>'<option value="'+esc(n)+'">').join('');
+    $('deckList').innerHTML = (names.length||none) ? names.map(n=>
+      '<li><div class="info"><b>'+esc(n)+'</b><div class="muted">'+cnt(n)+' từ</div></div>'+
+      '<button class="btn small" data-practice="'+esc(n)+'">Luyện</button>'+
+      '<button class="btn small" data-ren="'+esc(n)+'">Đổi tên</button>'+
+      '<button class="btn small danger" data-undeck="'+esc(n)+'">Bỏ deck</button></li>').join('') +
+      (none ? '<li><div class="info"><b>Chưa phân loại</b><div class="muted">'+none+' từ</div></div><button class="btn small" data-practice="__none__">Luyện</button></li>' : '')
+      : '<li class="muted">Chưa có deck nào. Chọn "+ Tạo deck mới…" khi thêm từ.</li>';
+  }
+  function toggleNew(id){ const on=$(id).value==='__new__'; $(id+'New').classList.toggle('hidden', !on); }
+  ['inDeck','bulkDeck'].forEach(id=>$(id).addEventListener('change', ()=>{
+    toggleNew(id); if($(id).value==='__new__') $(id+'New').focus(); else db.settings.lastDeck=$(id).value;
+  }));
+  function chosenDeck(selId, newId){
+    const v=$(selId).value;
+    if(v==='__new__'){ const n=$(newId).value.trim(); if(!n){ toast('Hãy nhập tên deck mới'); $(newId).focus(); return null; } return n.slice(0,40); }
+    return v==='__none__' ? '' : v;
+  }
+  let pFn=null;
+  function askText(msg, def, hint, fn){ $('pMsg').textContent=msg; $('pIn').value=def||''; $('pHint').textContent=hint||''; pFn=fn; show('pModal',true); setTimeout(()=>$('pIn').focus(),50); }
+  $('pNo').addEventListener('click', ()=>{ pFn=null; show('pModal',false); });
+  $('pYes').addEventListener('click', ()=>{ const f=pFn; pFn=null; show('pModal',false); if(f) f($('pIn').value.trim().slice(0,40)); });
+  $('pIn').addEventListener('keydown', e=>{ if(e.key==='Enter') $('pYes').click(); });
+  $('moveBtn').addEventListener('click', ()=>{
+    const W = shownWords(); if(!W.length) return;
+    askText('Chuyển '+W.length+' từ đang hiện sang deck:', '', 'Gõ tên deck có sẵn hoặc tên mới. Để trống = Chưa phân loại.', name=>{
+      W.forEach(w=>{ if((w.tag||'')!==name){ w.tag=name; touch(w); } });
+      save(); renderVocab(); renderStartInfo(); toast('Đã chuyển '+W.length+' từ sang '+deckLabel(name));
+    });
+  });
+  $('delShownBtn').addEventListener('click', ()=>{
+    const W = shownWords(); if(!W.length) return;
+    askConfirm('Xóa '+W.length+' từ đang hiện và thống kê của chúng?', ()=>{
+      const t=Date.now(), ids=new Set(W.map(w=>w.id));
+      W.forEach(w=>{ db.tomb[w.hanzi]=t; }); db.words=db.words.filter(w=>!ids.has(w.id));
+      save(); renderVocab(); renderStartInfo(); toast('Đã xóa '+W.length+' từ');
+    });
+  });
+  $('deckList').addEventListener('click', e=>{
+    const b=e.target.closest('button'); if(!b) return;
+    if(b.dataset.ren!==undefined){
+      const old=b.dataset.ren;
+      askText('Đổi tên deck "'+old+'" thành:', old, '', name=>{
+        if(!name || name===old) return;
+        db.words.forEach(w=>{ if(w.tag===old){ w.tag=name; touch(w); } });
+        if(db.settings.deck===old) db.settings.deck=name;
+        if(db.settings.lastDeck===old) db.settings.lastDeck=name;
+        save(); renderVocab(); renderStartInfo(); toast('Đã đổi tên deck');
+      });
+    } else if(b.dataset.undeck!==undefined){
+      const n=b.dataset.undeck, c=db.words.filter(w=>w.tag===n).length;
+      askConfirm('Bỏ deck "'+n+'"? '+c+' từ trong deck sẽ chuyển sang "Chưa phân loại" (không bị xóa).', ()=>{
+        db.words.forEach(w=>{ if(w.tag===n){ w.tag=''; touch(w); } });
+        if(db.settings.deck===n) db.settings.deck='all';
+        save(); renderVocab(); renderStartInfo();
+      });
+    } else if(b.dataset.practice!==undefined){
+      db.settings.deck=b.dataset.practice; db.settings.pos='all'; saveLocal();
+      document.querySelector('nav button[data-tab="practice"]').click();
+      renderStartInfo();
+    }
+  });
+  $('hsk1Btn').addEventListener('click', ()=>{
+    let added=0, upd=0;
+    HSK1.forEach(([h,py,pos,vi])=>{
+      const ex = db.words.find(w=>w.hanzi===h);
+      if(ex){ let ch=false; if(!ex.pos){ex.pos=pos; ch=true;} if(!ex.tag){ex.tag='HSK1'; ch=true;} if(!ex.pinyin){ex.pinyin=py; ch=true;} if(ch){touch(ex); upd++;} }
+      else if(addWord(h,py,vi,true,pos,'HSK1')) added++;
+    });
+    save(); renderVocab(); renderStartInfo();
+    toast(added||upd ? ('Đã nạp '+added+' từ HSK 1'+(upd?(', cập nhật '+upd+' từ'):'')) : 'Bộ HSK 1 đã có đủ');
+  });
+  function renderPosOptions(){
+    const set = new Set(POS_BASE);
+    db.words.forEach(w=>posParts(w).forEach(x=>{ if(!POS_BASE.some(b=>b.toLowerCase()===x)) set.add(x[0].toUpperCase()+x.slice(1)); }));
+    $('posList').innerHTML = POS_BASE.map(x=>'<option value="'+esc(x)+'">').join('');
+    const used = [...set].filter(x=>db.words.some(w=>posParts(w).includes(x.toLowerCase())));
+    const curv = db.settings.pos;
+    $('posSel').innerHTML = '<option value="all">Tất cả</option>' + used.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
+    $('posSel').value = used.includes(curv) ? curv : 'all';
+  }
+
+  // ---------- Stats ----------
+  function renderStats(){
+    const W = db.words;
+    const sum = k => W.reduce((a,w)=>a+(w[k]||0),0);
+    const so = sum('strokesOk'), sb = sum('strokesBad');
+    $('stWords').textContent = W.length;
+    $('stSessions').textContent = db.sessions||0;
+    $('stOk').textContent = sum('correct');
+    $('stBad').textContent = sum('wrong');
+    $('stStrokeOk').textContent = so;
+    $('stStrokeAcc').textContent = (so+sb) ? Math.round(so*100/(so+sb))+'%' : '–';
+    const rows = W.slice().sort((a,b)=>(b.wrong-b.correct)-(a.wrong-a.correct));
+    $('stTable').innerHTML = rows.length ? rows.map(w=>{
+      const t=w.correct+w.wrong; const acc = t?Math.round(w.correct*100/t)+'%':'–';
+      return '<tr><td><span class="hz" style="font-size:1.2rem">'+esc(w.hanzi)+'</span> <span class="muted">'+esc(w.meaning)+'</span></td><td class="num">'+w.correct+'</td><td class="num">'+w.wrong+'</td><td class="num">'+w.strokesBad+'</td><td class="num">'+acc+'</td></tr>';
+    }).join('') : '<tr><td colspan="5" class="muted">Chưa có dữ liệu</td></tr>';
+  }
+  $('resetStatsBtn').addEventListener('click', ()=>{
+    askConfirm('Đặt lại toàn bộ thống kê (giữ nguyên từ vựng)?', ()=>{
+      db.words.forEach(w=>{w.correct=w.wrong=w.strokesOk=w.strokesBad=0; w.last=null; touch(w);}); db.sessions=0; save(); renderStats();
+    });
+  });
+
+  // ---------- Quiz ----------
+  let queue=[], qi=0, cur=null, chars=[], ci=0, writer=null;
+  let wordMistakes=0, hintsUsed=0, gaveUp=false, curStroke=0, autoHinted=false;
+  let sessOk=0, sessBad=0, sessWeak=[];
+
+  function filteredWords(){
+    const d=db.settings.deck, p=(db.settings.pos||'all').toLowerCase();
+    return db.words.filter(w=> (d==='all' || (d==='__none__' ? !w.tag : w.tag===d)) && (p==='all' || posParts(w).includes(p)));
+  }
+  function renderStartInfo(){
+    renderPosOptions(); renderDecks();
+    const n = filteredWords().length, size = parseInt(db.settings.size)||0;
+    $('startInfo').textContent = !db.words.length ? 'Danh sách đang trống. Hãy thêm từ ở tab "Từ vựng".' :
+      (n ? ('Có '+n+' từ phù hợp'+(size && n>size ? (', mỗi phiên luyện '+size+' từ.') : '.')) : 'Không có từ nào khớp bộ lọc.');
+  }
+  $('orderSel').value = db.settings.order;
+  $('strictSel').value = db.settings.strict;
+  $('sizeSel').value = db.settings.size;
+  [['deckSel','deck'],['posSel','pos'],['sizeSel','size']].forEach(([id,k])=>$(id).addEventListener('change', e=>{ db.settings[k]=e.target.value; saveLocal(); renderStartInfo(); }));
+  $('orderSel').addEventListener('change', e=>{ db.settings.order=e.target.value; save(); });
+  $('strictSel').addEventListener('change', e=>{ db.settings.strict=e.target.value; save(); });
+
+  function updatePinyin(){
+    const on = db.settings.showPinyin;
+    $('pinyinToggle').textContent = on ? 'Ẩn Pinyin' : 'Hiện Pinyin';
+    $('qPinyin').textContent = (on && cur) ? (cur.pinyin || '(chưa có pinyin)') : '';
+  }
+  $('pinyinToggle').addEventListener('click', ()=>{ db.settings.showPinyin=!db.settings.showPinyin; save(); updatePinyin(); });
+
+  $('startBtn').addEventListener('click', startSession);
+  $('againBtn').addEventListener('click', ()=>{ show('summaryCard',false); show('startCard',true); renderStartInfo(); });
+
+  function startSession(){
+    if(!db.words.length){ toast('Danh sách từ đang trống'); return; }
+    if(!libOk()) return;
+    let list = filteredWords();
+    if(!list.length){ toast('Không có từ nào khớp bộ lọc'); return; }
+    if(db.settings.order==='random') shuffle(list);
+    else if(db.settings.order==='weak'){
+      shuffle(list);
+      list.sort((a,b)=>{
+        const sa=(a.wrong+1)/(a.correct+a.wrong+2), sb=(b.wrong+1)/(b.correct+b.wrong+2);
+        return sb-sa;
+      });
+    }
+    const size = parseInt(db.settings.size)||0;
+    if(size && list.length>size) list = list.slice(0,size);
+    queue = list.map(w=>w.id); qi=0; sessOk=0; sessBad=0; sessWeak=[];
+    db.sessions=(db.sessions||0)+1; save();
+    show('startCard',false); show('summaryCard',false); show('resultCard',false); show('quizCard',true);
+    loadWord();
+  }
+
+  function loadWord(){
+    cur = db.words.find(w=>w.id===queue[qi]);
+    if(!cur){ qi++; return qi<queue.length ? loadWord() : endSession(); }
+    chars = Array.from(cur.hanzi); ci=0;
+    wordMistakes=0; hintsUsed=0; gaveUp=false;
+    $('qMeaning').textContent = cur.meaning;
+    $('qPos').innerHTML = cur.pos ? '<span class="pos">'+esc(cur.pos)+'</span>' : '';
+    $('progText').textContent = 'Từ '+(qi+1)+' / '+queue.length;
+    $('progBar').style.width = (qi/queue.length*100)+'%';
+    updatePinyin();
+    show('quizCard',true); show('resultCard',false);
+    loadChar();
+  }
+
+  function renderSlots(){
+    $('qSlots').innerHTML = chars.map((c,i)=>
+      '<div class="slot '+(i<ci?'done':(i===ci?'current':''))+'">'+(i<ci?esc(c):'')+'</div>').join('');
+  }
+
+  function boardSize(){
+    const avail = Math.min(window.innerWidth>=700 ? 520 : 340, $('quizCard').clientWidth - 34);
+    return Math.max(220, Math.floor(avail));
+  }
+
+  function loadChar(){
+    renderSlots();
+    curStroke=0; autoHinted=false;
+    setFeedback(chars.length>1 ? ('Viết chữ thứ '+(ci+1)+' / '+chars.length) : 'Hãy viết chữ Hán vào ô', '');
+    const size = boardSize();
+    const board = $('board'); board.style.width=size+'px'; board.style.height=size+'px';
+    const tgt = $('target'); tgt.innerHTML='';
+    if(writer && writer.cancelQuiz){ try{ writer.cancelQuiz(); }catch(e){} }
+    writer = HanziWriter.create(tgt, chars[ci], {
+      width:size, height:size, padding: Math.round(size*0.06),
+      showOutline:false, showCharacter:false,
+      strokeColor:'#1f2937', outlineColor:'#e5e7eb',
+      highlightColor:'#f59e0b', drawingColor:'#2563eb',
+      drawingWidth: Math.max(4, Math.round(size/45)),
+      charDataLoader: loadCharData,
+      showHintAfterMisses:false, highlightOnComplete:true,
+      highlightCompleteColor:'#16a34a',
+      onLoadCharDataError: function(){
+        setFeedback('Không tải được dữ liệu nét cho chữ "'+chars[ci]+'". Kiểm tra mạng hoặc bấm "Xem đáp án".','bad');
+      }
+    });
+    const thisChar = ci;
+    writer.quiz({
+      leniency: parseFloat(db.settings.strict)||1,
+      onMistake: function(sd){
+        if(thisChar!==ci) return;
+        wordMistakes++; cur.strokesBad++; touch(cur); save();
+        if(sd.mistakesOnStroke>=3 || sd.totalMistakes>3){
+          setFeedback('✗ Sai nét '+(sd.strokeNum+1)+'. Gợi ý: nét tiếp theo đang nhấp nháy','warn');
+          autoHinted=true;
+          flashStroke(sd.strokeNum);
+        } else {
+          setFeedback('✗ Sai nét '+(sd.strokeNum+1)+' (lần '+sd.mistakesOnStroke+')','bad');
+        }
+      },
+      onCorrectStroke: function(sd){
+        if(thisChar!==ci) return;
+        cur.strokesOk++; touch(cur); save();
+        curStroke = sd.strokeNum+1;
+        const total = sd.strokeNum+1+sd.strokesRemaining;
+        setFeedback('✓ Đúng nét '+(sd.strokeNum+1)+' / '+total,'ok');
+      },
+      onComplete: function(sum){
+        if(thisChar!==ci) return;
+        ci++;
+        renderSlots();
+        setFeedback(sum.totalMistakes ? ('Xong chữ, sai '+sum.totalMistakes+' nét') : 'Hoàn hảo! 🎯', sum.totalMistakes?'warn':'ok');
+        setTimeout(()=>{ ci<chars.length ? loadChar() : finishWord(); }, 800);
+      }
+    });
+  }
+
+  function setFeedback(msg, cls){ const f=$('feedback'); f.textContent=msg; f.className='feedback '+(cls||''); }
+
+  function flashStroke(n){
+    if(!writer) return;
+    Promise.resolve(writer.highlightStroke(n))
+      .then(()=>new Promise(r=>setTimeout(r,150)))
+      .then(()=>writer.highlightStroke(n))
+      .catch(()=>{});
+  }
+
+  $('hintBtn').addEventListener('click', ()=>{
+    if(!writer) return;
+    hintsUsed++;
+    flashStroke(curStroke);
+    setFeedback('💡 Nét '+(curStroke+1)+' đang nhấp nháy','warn');
+  });
+  $('animBtn').addEventListener('click', ()=>{ hintsUsed++; openDemo(chars[ci] || chars[chars.length-1]); });
+  $('retryBtn').addEventListener('click', ()=>{ if(chars.length) loadChar(); });
+  $('giveUpBtn').addEventListener('click', ()=>{
+    if(!cur) return;
+    gaveUp=true;
+    try{ writer && writer.cancelQuiz(); }catch(e){}
+    finishWord();
+  });
+  $('quitBtn').addEventListener('click', ()=>{
+    try{ writer && writer.cancelQuiz(); }catch(e){}
+    endSession();
+  });
+
+  function finishWord(){
+    const ok = !gaveUp && wordMistakes===0 && hintsUsed===0 && !autoHinted;
+    if(ok){ cur.correct++; sessOk++; } else { cur.wrong++; sessBad++; sessWeak.push(cur.hanzi); }
+    cur.last = Date.now(); touch(cur); save();
+    show('quizCard',false); show('resultCard',true);
+    $('resultBadge').innerHTML = ok ? '<span class="badge ok">✓ Viết đúng từ trí nhớ</span>' : '<span class="badge bad">✗ Cần ôn lại</span>';
+    $('rHanzi').textContent = cur.hanzi;
+    $('rPinyin').textContent = cur.pinyin;
+    $('rMeaning').textContent = cur.meaning;
+    $('rPos').innerHTML = cur.pos ? '<span class="pos">'+esc(cur.pos)+'</span>' : '';
+    const parts=[];
+    if(gaveUp) parts.push('Bạn đã xem đáp án');
+    parts.push('Số nét sai: '+wordMistakes);
+    if(hintsUsed) parts.push('Gợi ý đã dùng: '+hintsUsed);
+    $('rDetail').textContent = parts.join(' · ');
+    $('nextBtn').textContent = (qi+1<queue.length) ? 'Từ tiếp theo →' : 'Xem kết quả';
+    $('progBar').style.width = ((qi+1)/queue.length*100)+'%';
+  }
+  $('nextBtn').addEventListener('click', ()=>{ qi++; qi<queue.length ? loadWord() : endSession(); });
+  $('rReplay').addEventListener('click', ()=>{ if(cur) openDemo(cur.hanzi); });
+
+  function endSession(){
+    show('quizCard',false); show('resultCard',false); show('summaryCard',true);
+    $('sOk').textContent=sessOk; $('sBad').textContent=sessBad;
+    $('sWeak').textContent = sessWeak.length ? ('Nên ôn lại: '+sessWeak.join('、')) : (sessOk ? 'Tuyệt vời, bạn viết đúng hết!' : '');
+    cur=null;
+  }
+
+  // ---------- Slow stroke-order demo ----------
+  let demoChars=[], demoIdx=0, demoWriter=null, demoToken=0;
+  function openDemo(text){
+    if(!libOk() || !text) return;
+    demoChars = Array.from(text); show('modal',true); playDemo();
+  }
+  function playDemo(){
+    const token = ++demoToken; demoIdx=0;
+    const step = ()=>{
+      if(token!==demoToken || demoIdx>=demoChars.length) return;
+      $('modalInfo').textContent = demoChars.length>1 ? ('Chữ '+(demoIdx+1)+' / '+demoChars.length) : '';
+      const t=$('demoTarget'); t.innerHTML='';
+      demoWriter = HanziWriter.create(t, demoChars[demoIdx], {
+        width:240, height:240, padding:14, showOutline:true, showCharacter:false,
+        strokeColor:'#b91c1c', outlineColor:'#e5e7eb',
+        strokeAnimationSpeed:0.5, delayBetweenStrokes:600,
+        charDataLoader: loadCharData
+      });
+      demoWriter.animateCharacter({ onComplete: ()=>{
+        if(token!==demoToken) return;
+        demoIdx++; setTimeout(step, 900);
+      }});
+    };
+    step();
+  }
+  $('modalReplay').addEventListener('click', playDemo);
+  $('modalClose').addEventListener('click', ()=>{ demoToken++; show('modal',false); $('demoTarget').innerHTML=''; });
+
+  // Prevent page scroll while drawing on touch screens
+  ['touchstart','touchmove','gesturestart'].forEach(ev=>$('board').addEventListener(ev, e=>e.preventDefault(), {passive:false}));
+  let lastTap=0; document.addEventListener('touchend', e=>{ const n=Date.now(); if(n-lastTap<300) e.preventDefault(); lastTap=n; }, {passive:false});
+  let rT; window.addEventListener('resize', ()=>{ clearTimeout(rT); rT=setTimeout(()=>{ if(!$('quizCard').classList.contains('hidden') && chars.length && ci<chars.length) loadChar(); }, 300); });
+
+  $('offlineBtn').addEventListener('click', ()=>{
+    const b=$('offlineBtn'); b.disabled=true;
+    prefetchChars(wordChars(), (n,t)=>{ $('offlineInfo').textContent='Đang tải '+n+' / '+t+' chữ...'; })
+      .then(r=>{ b.disabled=false;
+        $('offlineInfo').textContent = r.fail ? ('Đã lưu '+r.done+' chữ, lỗi '+r.fail+' chữ (kiểm tra mạng hoặc chữ không có dữ liệu).') : ('✓ Đã lưu đủ '+r.done+' chữ, có thể dùng offline.'); });
+  });
+  // Đăng ký service worker để chạy offline
+  if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+    window.addEventListener('load', ()=>{
+      navigator.serviceWorker.register('sw.js').then(()=>{ setTimeout(()=>prefetchChars(wordChars()), 1500); }).catch(()=>{});
+    });
+  }
+  if(navigator.storage && navigator.storage.persist){ navigator.storage.persist().catch(()=>{}); }
+  $('cNo').addEventListener('click', ()=>{ cFn=null; show('cModal',false); });
+  $('cYes').addEventListener('click', ()=>{ const f=cFn; cFn=null; show('cModal',false); if(f) f(); });
+
+
+  // ================= Ngữ pháp / Dịch / Nói =================
+  db.sstat = db.sstat || {};   // thống kê từng câu: {tok,tbad,sok,sbad,u}
+  db.gdone = db.gdone || {};   // điểm ngữ pháp đã nắm vững: {v:true/false,u}
+  db.settings = Object.assign({ttsRate:'0.8', gLevel:'1', gPy:false, spPy:true,
+    trDir:'mix', trLevel:'all', trCount:'10', trOrder:'weak', spSrc:'sent', spLevel:'all', spDeck:'all', spCount:'10'}, db.settings);
+  const GRAMMAR_LEVELS = [...new Set(GRAMMAR.map(g=>g.l))].sort((a,b)=>a-b);
+  const SENTS = GRAMMAR.flatMap(g=>g.x.map((x,i)=>({id:g.id+'#'+i, gid:g.id, l:g.l, zh:x[0], py:x[1], vi:x[2], gt:g.t, gs:g.s})));
+  const gById = id => GRAMMAR.find(g=>g.id===id);
+  function sst(id, write){ if(db.sstat[id]) return db.sstat[id]; const o={tok:0,tbad:0,sok:0,sbad:0,u:0}; if(write) db.sstat[id]=o; return o; }
+  function isDone(gid){ return !!(db.gdone[gid] && db.gdone[gid].v); }
+  function levelOpts(withAll){ return (withAll?[['all','Tất cả HSK '+GRAMMAR_LEVELS.join('–')]]:[]).concat(GRAMMAR_LEVELS.map(l=>[String(l),'HSK '+l])); }
+
+  // ---------- Text-to-speech ----------
+  let zhVoice = null;
+  function pickVoice(){
+    if(!('speechSynthesis' in window)) return;
+    const vs = speechSynthesis.getVoices();
+    zhVoice = vs.find(v=>/zh[-_]CN/i.test(v.lang)) || vs.find(v=>/^zh/i.test(v.lang)) || null;
+  }
+  if('speechSynthesis' in window){ pickVoice(); try{ speechSynthesis.onvoiceschanged = pickVoice; }catch(e){} }
+  function say(text, slow){
+    if(!('speechSynthesis' in window)){ toast('Thiết bị không hỗ trợ đọc mẫu'); return; }
+    try{
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'zh-CN'; if(zhVoice) u.voice = zhVoice;
+      const r = parseFloat(db.settings.ttsRate)||0.8; u.rate = slow ? Math.max(0.4, r*0.6) : r;
+      speechSynthesis.speak(u);
+    }catch(e){ toast('Không phát được âm thanh'); }
+  }
+
+  // ---------- So khớp chuỗi ----------
+  const ZH_DIG = '零一二三四五六七八九';
+  function numToZh(n){
+    n = parseInt(n,10); if(isNaN(n)) return '';
+    if(n<10) return ZH_DIG[n];
+    if(n>=10000) return String(n).split('').map(d=>ZH_DIG[+d]).join('');
+    const units=['','十','百','千']; const ds=String(n).split('').map(Number); let out='', zero=false;
+    ds.forEach((d,i)=>{ const u=units[ds.length-1-i];
+      if(d===0){ zero=true; return; }
+      if(zero && out){ out+='零'; } zero=false;
+      out += (d===1 && u==='十' && i===0 ? '' : ZH_DIG[d]) + u; });
+    return out;
+  }
+  function normZh(s){
+    return String(s||'').replace(/[０-９]/g, c=>String.fromCharCode(c.charCodeAt(0)-65248))
+      .replace(/\d+/g, m=>numToZh(m))
+      .replace(/[^㐀-鿿A-Za-z]/g,'');
+  }
+  const SOUND_EQ = [['他','她','它'],['的','得','地'],['在','再'],['做','作','坐'],['那','哪'],['二','两']];
+  function eqChar(a,b,loose){
+    if(a===b) return true;
+    if(!loose) return (a==='二'&&b==='两')||(a==='两'&&b==='二');
+    return SOUND_EQ.some(g=>g.includes(a)&&g.includes(b));
+  }
+  // LCS căn chỉnh: trả về mảng đánh dấu ký tự đích nào khớp, ký tự người dùng nào khớp
+  function align(target, user, loose){
+    const A=[...target], B=[...user], n=A.length, m=B.length;
+    const dp = Array.from({length:n+1},()=>new Array(m+1).fill(0));
+    for(let i=n-1;i>=0;i--) for(let j=m-1;j>=0;j--)
+      dp[i][j] = eqChar(A[i],B[j],loose) ? dp[i+1][j+1]+1 : Math.max(dp[i+1][j], dp[i][j+1]);
+    const tOk=new Array(n).fill(false), uOk=new Array(m).fill(false); let i=0,j=0;
+    while(i<n && j<m){
+      if(eqChar(A[i],B[j],loose)){ tOk[i]=uOk[j]=true; i++; j++; }
+      else if(dp[i+1][j]>=dp[i][j+1]) i++; else j++;
+    }
+    const l = dp[0][0];
+    return {tOk, uOk, lcs:l, score: (n+m) ? (2*l/(n+m)) : 1, A, B};
+  }
+  function viWords(s){ return String(s||'').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu,' ').split(/\s+/).filter(Boolean); }
+  function viScore(target, user){
+    const a=viWords(target), b=viWords(user); if(!a.length||!b.length) return 0;
+    const pool=a.slice(); let hit=0;
+    b.forEach(w=>{ const k=pool.indexOf(w); if(k>=0){ hit++; pool.splice(k,1); } });
+    return 2*hit/(a.length+b.length);
+  }
+  function markChars(chars, ok){ return chars.map((c,i)=>'<span class="'+(ok[i]?'c-ok':'c-bad')+'">'+esc(c)+'</span>').join(''); }
+
+  // ---------- Tab Ngữ pháp ----------
+  fillSelect($('gLevel'), levelOpts(true), db.settings.gLevel);
+  $('gShow').value = 'all';
+  $('gNote').textContent = 'Hiện có '+GRAMMAR.length+' điểm ngữ pháp HSK '+GRAMMAR_LEVELS.join('–')+'. Các cấp độ cao hơn sẽ được bổ sung dần.';
+  function renderGrammar(){
+    const lv=$('gLevel').value, show=$('gShow').value, raw=$('gSearch').value.trim(), q=fold(raw);
+    const inLv = GRAMMAR.filter(g=> raw || lv==='all' || String(g.l)===lv);
+    const list = inLv.filter(g=> (show==='all' || (show==='done')===isDone(g.id)) &&
+      (!raw || (g.t+g.s+g.e+g.x.map(x=>x.join(' ')).join(' ')).includes(raw) || fold(g.t+' '+g.e+' '+g.x.map(x=>x[1]+' '+x[2]).join(' ')).includes(q)));
+    $('gProgress').textContent = 'Đã nắm vững '+inLv.filter(g=>isDone(g.id)).length+' / '+inLv.length;
+    $('gPyToggle').textContent = db.settings.gPy ? 'Ẩn Pinyin' : 'Hiện Pinyin';
+    $('gList').innerHTML = list.length ? list.map(g=>
+      '<details class="card gp"'+(list.length===1?' open':'')+'><summary><span class="gid">HSK'+g.l+' · '+esc(g.id.split('-')[1])+'</span> '+esc(g.t)+(isDone(g.id)?' <span class="badge ok">✓</span>':'')+'</summary>'+
+      '<div class="gs hz">'+esc(g.s)+'</div><p class="ge">'+esc(g.e)+'</p>'+
+      g.x.map(x=>'<div class="gx"><div class="row" style="align-items:flex-start"><div style="flex:1"><div class="hz gzh">'+esc(x[0])+'</div>'+
+        (db.settings.gPy?'<div class="pinyin" style="font-size:.9rem">'+esc(x[1])+'</div>':'')+'<div class="muted">'+esc(x[2])+'</div></div>'+
+        '<button class="btn small" style="flex:0 0 auto" data-say="'+esc(x[0])+'">🔊</button></div></div>').join('')+
+      '<div class="row" style="margin-top:10px">'+
+        '<button class="btn small'+(isDone(g.id)?' primary':'')+'" data-done="'+g.id+'">'+(isDone(g.id)?'✓ Đã nắm vững':'Đánh dấu đã nắm vững')+'</button>'+
+        '<button class="btn small" data-trg="'+g.id+'">🔁 Luyện dịch</button>'+
+        '<button class="btn small" data-spg="'+g.id+'">🎤 Luyện nói</button></div></details>'
+    ).join('') : '<div class="card muted">Không có điểm ngữ pháp nào phù hợp.</div>';
+  }
+  ['gLevel','gShow'].forEach(id=>$(id).addEventListener('change', ()=>{ if(id==='gLevel'){ db.settings.gLevel=$('gLevel').value; saveLocal(); } renderGrammar(); }));
+  $('gSearch').addEventListener('input', renderGrammar);
+  $('gPyToggle').addEventListener('click', ()=>{ db.settings.gPy=!db.settings.gPy; saveLocal(); renderGrammar(); });
+  $('gList').addEventListener('click', e=>{
+    const b=e.target.closest('button'); if(!b) return;
+    if(b.dataset.say!==undefined) say(b.dataset.say);
+    else if(b.dataset.done){ const id=b.dataset.done; db.gdone[id]={v:!isDone(id), u:Date.now()}; save(); renderGrammar(); }
+    else if(b.dataset.trg){ trFocus=b.dataset.trg; gotoTab('translate'); }
+    else if(b.dataset.spg){ spFocus=b.dataset.spg; $('spSrc').value='sent'; db.settings.spSrc='sent'; gotoTab('speak'); }
+  });
+  function gotoTab(t){ const b=document.querySelector('nav button[data-tab="'+t+'"]'); if(b) b.click(); }
+
+  // ---------- Tab Luyện dịch ----------
+  let trFocus=null, trQ=[], trI=0, trCur=null, trDirCur='vi2zh', trDone=false, trOk=0, trBad=0, trWeak=[];
+  fillSelect($('trLevel'), levelOpts(true), db.settings.trLevel);
+  ['trDir','trCount','trOrder'].forEach(id=>{ $(id).value = db.settings[id]; });
+  ['trDir','trLevel','trCount','trOrder'].forEach(id=>$(id).addEventListener('change', ()=>{ db.settings[id]=$(id).value; saveLocal(); renderTrSetup(); }));
+  function trPool(){
+    if(trFocus) return SENTS.filter(s=>s.gid===trFocus);
+    const lv=$('trLevel').value; return SENTS.filter(s=> lv==='all' || String(s.l)===lv);
+  }
+  function renderTrSetup(){
+    const g = trFocus && gById(trFocus);
+    $('trFocus').innerHTML = g ? ('Chỉ luyện: <b>'+esc(g.t)+'</b> <button class="btn small ghost" id="trFocusX">✕ Bỏ lọc</button>') : '';
+    const x=$('trFocusX'); if(x) x.addEventListener('click', ()=>{ trFocus=null; renderTrSetup(); });
+    $('trInfo').textContent = 'Có '+trPool().length+' câu phù hợp.';
+  }
+  function weakSort(list, okK, badK){
+    shuffle(list);
+    return list.sort((a,b)=>{ const A=sst(a.id), B=sst(b.id);
+      return (B[badK]+1)/(B[okK]+B[badK]+2) - (A[badK]+1)/(A[okK]+A[badK]+2); });
+  }
+  $('trStart').addEventListener('click', ()=>{
+    let list = trPool().slice(); if(!list.length){ toast('Không có câu nào'); return; }
+    list = $('trOrder').value==='weak' ? weakSort(list,'tok','tbad') : shuffle(list);
+    const n=parseInt($('trCount').value)||0; if(n && list.length>n) list=list.slice(0,n);
+    trQ=list; trI=0; trOk=0; trBad=0; trWeak=[];
+    show('trSetup',false); show('trSummary',false); show('trCard',true); trLoad();
+  });
+  function trLoad(){
+    trCur=trQ[trI]; trDone=false;
+    const d=$('trDir').value; trDirCur = d==='mix' ? (Math.random()<0.5?'vi2zh':'zh2vi') : d;
+    $('trProg').textContent='Câu '+(trI+1)+' / '+trQ.length; $('trBar').style.width=(trI/trQ.length*100)+'%';
+    $('trDirLabel').textContent = trDirCur==='vi2zh' ? 'Dịch sang tiếng Trung:' : 'Dịch sang tiếng Việt:';
+    $('trPrompt').innerHTML = trDirCur==='vi2zh' ? esc(trCur.vi) : '<span class="hz">'+esc(trCur.zh)+'</span>';
+    $('trPrompt').classList.toggle('zh', trDirCur!=='vi2zh');
+    $('trSay').classList.toggle('hidden', trDirCur==='vi2zh');
+    $('trHintP').classList.remove('hidden');
+    $('trHint').textContent=''; $('trIn').value=''; $('trIn').disabled=false;
+    $('trIn').setAttribute('lang', trDirCur==='vi2zh'?'zh-CN':'vi');
+    $('trIn').placeholder = trDirCur==='vi2zh' ? 'Gõ câu tiếng Trung…' : 'Gõ nghĩa tiếng Việt…';
+    show('trResult',false); show('trCheck',true); show('trSkip',true);
+    setTimeout(()=>{ try{ $('trIn').focus(); }catch(e){} }, 50);
+  }
+  $('trHintG').addEventListener('click', ()=>{ if(trCur) $('trHint').textContent='Ngữ pháp: '+trCur.gt+'\n'+trCur.gs; });
+  $('trHintP').addEventListener('click', ()=>{ if(trCur) $('trHint').textContent='Pinyin: '+trCur.py; });
+  $('trSay').addEventListener('click', ()=>{ if(trCur) say(trCur.zh); });
+  $('trCheck').addEventListener('click', ()=>trGrade(false));
+  $('trSkip').addEventListener('click', ()=>trGrade(true));
+  $('trIn').addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey && !e.isComposing){ e.preventDefault(); trDone ? $('trNext')&&$('trNext').click() : trGrade(false); } });
+  function trGrade(skipped){
+    if(trDone) return;
+    const ans=$('trIn').value.trim();
+    if(!skipped && !ans){ toast('Hãy nhập câu dịch'); return; }
+    trDone=true; $('trIn').disabled=true; show('trCheck',false); show('trSkip',false);
+    let html='', exact=false, score=0;
+    const answerBlock = '<div class="tr-ans"><div class="hz" style="font-size:1.3rem">'+esc(trCur.zh)+' <button class="btn small" data-say="'+esc(trCur.zh)+'">🔊</button></div><div class="pinyin">'+esc(trCur.py)+'</div><div>'+esc(trCur.vi)+'</div><div class="muted" style="font-size:.8rem;margin-top:4px">Ngữ pháp: '+esc(trCur.gt)+'</div></div>';
+    if(skipped){ html = '<div class="badge bad">Đáp án</div>'+answerBlock; }
+    else if(trDirCur==='vi2zh'){
+      const t=normZh(trCur.zh), u=normZh(ans), al=align(t,u,false);
+      exact = al.lcs===al.A.length && al.A.length===al.B.length; score=al.score;
+      html = (exact?'<div class="badge ok">✓ Chính xác</div>':'<div class="badge bad">Khớp '+Math.round(score*100)+'%</div>')+
+        '<div class="muted" style="margin-top:8px">Bạn viết:</div><div class="hz tr-diff">'+(al.B.length?markChars(al.B,al.uOk):'—')+'</div>'+
+        (exact?'':'<div class="muted">Đáp án (chữ đỏ là chỗ bạn thiếu/sai):</div><div class="hz tr-diff">'+markChars(al.A,al.tOk)+'</div>')+answerBlock;
+    } else {
+      score=viScore(trCur.vi, ans); exact = score>=0.85;
+      html = (exact?'<div class="badge ok">✓ Đúng ý</div>':'<div class="badge bad">Khớp '+Math.round(score*100)+'% từ ngữ</div>')+
+        '<div class="muted" style="margin-top:8px">Bạn dịch: '+esc(ans)+'</div>'+answerBlock;
+    }
+    const last = trI+1>=trQ.length;
+    html += '<div class="row" style="margin-top:10px">'+
+      (exact||skipped ? '' : '<button class="btn" id="trOverride">Tôi dịch đúng ý</button>')+
+      '<button class="btn primary" id="trNext">'+(last?'Xem kết quả':'Câu tiếp →')+'</button></div>';
+    $('trResult').innerHTML=html; show('trResult',true);
+    let counted = exact ? 'ok' : 'bad';
+    const commit = ()=>{ const s=sst(trCur.id,true); if(counted==='ok'){ s.tok++; trOk++; } else { s.tbad++; trBad++; trWeak.push(trCur); } s.u=Date.now(); save(); };
+    const ov=$('trOverride'); if(ov) ov.addEventListener('click', ()=>{ counted='ok'; ov.disabled=true; ov.textContent='✓ Đã tính là đúng'; });
+    $('trNext').addEventListener('click', ()=>{ commit(); trI++; trI<trQ.length ? trLoad() : trEnd(); });
+    $('trResult').querySelectorAll('button[data-say]').forEach(b=>b.addEventListener('click', ()=>say(b.dataset.say)));
+  }
+  function trEnd(){
+    show('trCard',false); show('trSummary',true); show('trSetup',true); renderTrSetup();
+    $('trSummary').innerHTML = '<h2>Kết quả luyện dịch</h2><div class="stats-grid"><div class="stat"><b style="color:var(--ok)">'+trOk+'</b><span class="muted">Đúng</span></div><div class="stat"><b style="color:var(--bad)">'+trBad+'</b><span class="muted">Cần ôn</span></div></div>'+
+      (trWeak.length ? '<div style="text-align:left">'+trWeak.map(s=>'<div class="gx"><div class="hz">'+esc(s.zh)+'</div><div class="muted">'+esc(s.vi)+'</div></div>').join('')+'</div>' : '');
+  }
+  $('trQuit').addEventListener('click', ()=>{ if(trDone && $('trNext')) $('trNext').click(); trEnd(); });
+
+  // ---------- Tab Luyện nói ----------
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let spFocus=null, spQ=[], spI=0, spCur=null, spBest=0, rec=null, recOn=false, spOk=0, spBad=0, spWeak=[];
+  $('spSupport').textContent = SR ? '' : 'Trình duyệt này chưa hỗ trợ nhận dạng giọng nói, nên app chỉ đọc được câu mẫu. Trên iPad: mở app bằng Safari (gõ link github.io, không mở từ icon Màn hình chính) và bật Cài đặt → Siri → Đọc chính tả. Trên máy tính: dùng Chrome.';
+  fillSelect($('spLevel'), levelOpts(true), db.settings.spLevel);
+  $('spSrc').value=db.settings.spSrc; $('spCount').value=db.settings.spCount; $('spRate').value=db.settings.ttsRate;
+  function renderSpSetup(){
+    const vocab=$('spSrc').value==='vocab';
+    show('spLevelWrap',!vocab); show('spDeckWrap',vocab);
+    const names=deckNames();
+    fillSelect($('spDeck'), [['all','Tất cả từ vựng']].concat(names.map(n=>[n,n])), db.settings.spDeck);
+    $('spRateVal').textContent = (+db.settings.ttsRate).toFixed(1)+'×';
+    const g = !vocab && spFocus && gById(spFocus);
+    $('spFocus').innerHTML = g ? ('Chỉ luyện: <b>'+esc(g.t)+'</b> <button class="btn small ghost" id="spFocusX">✕ Bỏ lọc</button>') : '';
+    const x=$('spFocusX'); if(x) x.addEventListener('click', ()=>{ spFocus=null; renderSpSetup(); });
+    $('spStart').textContent = 'Bắt đầu luyện nói ('+spPool().length+' mục)';
+  }
+  function spPool(){
+    if($('spSrc').value==='vocab'){
+      const d=$('spDeck').value; return db.words.filter(w=>d==='all'||w.tag===d).map(w=>({id:'w:'+w.hanzi, zh:w.hanzi, py:w.pinyin, vi:w.meaning}));
+    }
+    if(spFocus) return SENTS.filter(s=>s.gid===spFocus);
+    const lv=$('spLevel').value; return SENTS.filter(s=>lv==='all'||String(s.l)===lv);
+  }
+  ['spSrc','spLevel','spDeck','spCount'].forEach(id=>$(id).addEventListener('change', ()=>{ db.settings[id]=$(id).value; saveLocal(); renderSpSetup(); }));
+  $('spRate').addEventListener('input', ()=>{ db.settings.ttsRate=$('spRate').value; saveLocal(); $('spRateVal').textContent=(+db.settings.ttsRate).toFixed(1)+'×'; });
+  $('spStart').addEventListener('click', ()=>{
+    let list=spPool().slice(); if(!list.length){ toast('Không có mục nào để luyện'); return; }
+    list = weakSort(list,'sok','sbad');
+    const n=parseInt($('spCount').value)||0; if(n && list.length>n) list=list.slice(0,n);
+    spQ=list; spI=0; spOk=0; spBad=0; spWeak=[];
+    show('spSetup',false); show('spSummary',false); show('spCard',true); spLoad();
+  });
+  function spLoad(){
+    stopRec(); spCur=spQ[spI]; spBest=0;
+    $('spProg').textContent=(spI+1)+' / '+spQ.length; $('spBar').style.width=(spI/spQ.length*100)+'%';
+    $('spTarget').textContent=spCur.zh;
+    $('spPinyin').textContent = db.settings.spPy ? (spCur.py||'') : '';
+    $('spPyToggle').textContent = db.settings.spPy ? 'Ẩn Pinyin' : 'Hiện Pinyin';
+    $('spMeaning').textContent=spCur.vi||'';
+    $('spLive').textContent = SR ? 'Nghe mẫu rồi bấm 🎤 để nói' : 'Thiết bị này chỉ nghe mẫu được, chưa chấm giọng.';
+    $('spLive').className='feedback';
+    show('spResult',false); $('spMic').disabled=!SR;
+    $('spNext').textContent = spI+1>=spQ.length ? 'Xem kết quả' : 'Câu tiếp →';
+  }
+  $('spPyToggle').addEventListener('click', ()=>{ db.settings.spPy=!db.settings.spPy; saveLocal(); if(spCur){ $('spPinyin').textContent=db.settings.spPy?(spCur.py||''):''; $('spPyToggle').textContent=db.settings.spPy?'Ẩn Pinyin':'Hiện Pinyin'; } });
+  $('spListen').addEventListener('click', ()=>{ if(spCur) say(spCur.zh); });
+  $('spSlow').addEventListener('click', ()=>{ if(spCur) say(spCur.zh, true); });
+  function stopRec(){ if(rec){ try{ rec.abort(); }catch(e){} } rec=null; recOn=false; $('spMic').textContent='🎤 Bấm để nói'; $('spMic').classList.add('primary'); }
+  function spEvaluate(alts){
+    const t=normZh(spCur.zh); let best=null, bestText='';
+    alts.forEach(a=>{ const al=align(t, normZh(a), true); if(!best || al.score>best.score){ best=al; bestText=a; } });
+    if(!best) return;
+    const pct=Math.round(best.score*100); spBest=Math.max(spBest, pct);
+    const cls = pct>=85?'ok':(pct>=60?'warn':'bad');
+    $('spResult').innerHTML = '<div class="sp-target hz">'+markChars(best.A,best.tOk)+'</div>'+
+      '<div class="badge '+(pct>=85?'ok':'bad')+'" style="margin:6px 0">'+pct+'% '+(pct>=85?'Rất tốt!':(pct>=60?'Gần đúng, thử lại nhé':'Chưa đúng, nghe mẫu rồi thử lại'))+'</div>'+
+      '<div class="muted">App nghe được: <span class="hz">'+esc(bestText||'—')+'</span></div>'+
+      (spBest>pct?'<div class="muted" style="font-size:.8rem">Lần tốt nhất: '+spBest+'%</div>':'');
+    show('spResult',true);
+    $('spLive').textContent = 'Bấm 🎤 để thử lại'; $('spLive').className='feedback '+cls;
+  }
+  $('spMic').addEventListener('click', ()=>{
+    if(!SR || !spCur) return;
+    if(recOn){ try{ rec.stop(); }catch(e){} return; }
+    try{ speechSynthesis && speechSynthesis.cancel(); }catch(e){}
+    rec = new SR(); rec.lang='zh-CN'; rec.interimResults=true; rec.continuous=false; rec.maxAlternatives=3;
+    let finalAlts=null;
+    rec.onresult = ev=>{
+      let interim='';
+      for(let i=ev.resultIndex;i<ev.results.length;i++){
+        const r=ev.results[i];
+        if(r.isFinal){ finalAlts=[]; for(let k=0;k<r.length;k++) finalAlts.push(r[k].transcript); }
+        else interim += r[0].transcript;
+      }
+      if(interim) $('spLive').textContent='Đang nghe: '+interim;
+    };
+    rec.onerror = ev=>{
+      const m = {'not-allowed':'App chưa được phép dùng micro. Vào Cài đặt → Safari → Micro để cho phép.','service-not-allowed':'Nhận dạng giọng nói đang tắt. Bật Cài đặt → Siri → Đọc chính tả.','no-speech':'Không nghe thấy gì, hãy nói to và rõ hơn.','audio-capture':'Không tìm thấy micro.','network':'Nhận dạng giọng nói cần có mạng.'}[ev.error];
+      $('spLive').textContent = m || ('Lỗi nhận dạng: '+ev.error); $('spLive').className='feedback bad';
+    };
+    rec.onend = ()=>{ const a=finalAlts; stopRec(); if(a && a.length) spEvaluate(a); };
+    try{ rec.start(); recOn=true; $('spMic').textContent='■ Dừng (đang nghe…)'; $('spMic').classList.remove('primary'); $('spLive').textContent='Đang nghe… hãy đọc câu trên'; $('spLive').className='feedback'; }
+    catch(e){ stopRec(); $('spLive').textContent='Không bật được micro'; }
+  });
+  $('spNext').addEventListener('click', ()=>{
+    stopRec();
+    if(spCur && SR){ const s=sst(spCur.id,true); if(spBest>=85){ s.sok++; spOk++; } else { s.sbad++; spBad++; spWeak.push(spCur); } s.u=Date.now(); save(); }
+    spI++; spI<spQ.length ? spLoad() : spEnd();
+  });
+  function spEnd(){
+    stopRec(); show('spCard',false); show('spSummary',true); show('spSetup',true); renderSpSetup();
+    $('spSummary').innerHTML = '<h2>Kết quả luyện nói</h2>'+(SR?'<div class="stats-grid"><div class="stat"><b style="color:var(--ok)">'+spOk+'</b><span class="muted">Đạt (≥85%)</span></div><div class="stat"><b style="color:var(--bad)">'+spBad+'</b><span class="muted">Cần luyện thêm</span></div></div>':'')+
+      (spWeak.length?'<div style="text-align:left">'+spWeak.map(s=>'<div class="gx"><div class="hz">'+esc(s.zh)+'</div><div class="muted">'+esc(s.py||'')+'</div></div>').join('')+'</div>':'');
+  }
+  $('spQuit').addEventListener('click', spEnd);
+
+  // ---------- Thống kê bổ sung ----------
+  function renderSkillStats(){
+    const vals=Object.values(db.sstat); const sum=k=>vals.reduce((a,v)=>a+(v[k]||0),0);
+    const tok=sum('tok'), tb=sum('tbad'), so=sum('sok'), sb=sum('sbad');
+    $('stGram').textContent = GRAMMAR.filter(g=>isDone(g.id)).length+'/'+GRAMMAR.length;
+    $('stTr').textContent = (tok+tb) ? Math.round(tok*100/(tok+tb))+'%' : '–';
+    $('stSp').textContent = (so+sb) ? Math.round(so*100/(so+sb))+'%' : '–';
+    $('stTrN').textContent = (tok+tb)+' câu đã dịch'; $('stSpN').textContent = (so+sb)+' lượt nói';
+  }
+  function mergeStamped(a,b){
+    const out=Object.assign({}, a||{});
+    Object.keys(b||{}).forEach(k=>{ if(!out[k] || (b[k].u||0) > (out[k].u||0)) out[k]=b[k]; });
+    return out;
+  }
+
+  // ================= Đồng bộ qua GitHub Gist =================
+  var APP_VERSION = '2.0.1';
+  var syncInit = false;
+  var SYNC_KEY = 'hanzi-trainer-sync', GIST_FILE = 'hanzi-trainer-data.json';
+  var syncCfg = (function(){ try{ return JSON.parse(localStorage.getItem(SYNC_KEY)) || {}; }catch(e){ return {}; } })();
+  var syncBusy = false, syncPending = false, pushTimer = null;
+  function saveSyncCfg(){ try{ localStorage.setItem(SYNC_KEY, JSON.stringify(syncCfg)); }catch(e){} }
+  function syncOn(){ return !!(syncCfg.token && syncCfg.gistId); }
+  function setBadge(t){ $('syncBadge').textContent = t; }
+  function hhmm(ts){ const d=new Date(ts); return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0'); }
+  function renderSyncUI(){
+    show('syncOff', !syncOn()); show('syncOn', syncOn());
+    if(syncOn()){
+      $('syncWho').innerHTML = 'Đã kết nối tài khoản <b>'+esc(syncCfg.login||'GitHub')+'</b>'+(syncCfg.last?(' · lần cuối '+hhmm(syncCfg.last)):'');
+      if(!$('syncBadge').textContent) setBadge(navigator.onLine ? '☁️' : '☁️ offline');
+    } else setBadge('');
+  }
+  async function gh(path, opts){
+    opts = opts || {};
+    const headers = {'Authorization':'Bearer '+syncCfg.token, 'Accept':'application/vnd.github+json'};
+    if(opts.body) headers['Content-Type']='application/json';
+    let r;
+    try{ r = await fetch('https://api.github.com'+path, {method:opts.method||'GET', body:opts.body, headers, cache:'no-store'}); }
+    catch(err){ const e=new Error('NETWORK'); e.status=0; throw e; }
+    if(!r.ok){
+      let msg=''; try{ msg=(await r.json()).message||''; }catch(_){}
+      const e=new Error('HTTP '+r.status+(msg?(' – '+msg):'')); e.status=r.status; e.ghMsg=msg; throw e;
+    }
+    const data = r.status===204 ? null : await r.json();
+    if(opts.withHeaders) return {data, scopes: r.headers.get('x-oauth-scopes')};
+    return data;
+  }
+  function payload(){ return {v:1, words:db.words, tomb:db.tomb, sessions:db.sessions||0, sstat:db.sstat, gdone:db.gdone}; }
+  function mergeData(remote){
+    const rw = Array.isArray(remote.words) ? remote.words : [];
+    const tomb = Object.assign({}, remote.tomb||{});
+    Object.keys(db.tomb).forEach(k=>{ tomb[k] = Math.max(tomb[k]||0, db.tomb[k]); });
+    const map = new Map(), order = [];
+    const consider = w=>{
+      if(!w || !w.hanzi) return;
+      const c = map.get(w.hanzi);
+      if(!c){ map.set(w.hanzi, w); order.push(w.hanzi); }
+      else if((w.u||0) > (c.u||0)) map.set(w.hanzi, w);
+    };
+    db.words.forEach(consider); rw.forEach(consider);
+    const words = [];
+    order.forEach(h=>{
+      const w = map.get(h);
+      if(tomb[h] && tomb[h] >= (w.u||0)) return;
+      delete tomb[h];
+      if(!w.id) w.id = Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+      words.push(w);
+    });
+    return {v:1, words, tomb, sessions: Math.max(db.sessions||0, remote.sessions||0), sstat: mergeStamped(db.sstat, remote.sstat), gdone: mergeStamped(db.gdone, remote.gdone)};
+  }
+  function refreshViews(){
+    renderVocab(); renderStartInfo();
+    if(!$('tab-stats').classList.contains('hidden')) renderStats();
+    if(!$('tab-grammar').classList.contains('hidden')) renderGrammar();
+  }
+  function schedulePush(){
+    if(!syncInit || !syncOn()) return;
+    clearTimeout(pushTimer); pushTimer = setTimeout(syncNow, 2500);
+  }
+  async function createGist(){
+    const g = await gh('/gists', {method:'POST', body: JSON.stringify({
+      description:'Dữ liệu app Luyện viết chữ Hán (tự động đồng bộ)', public:false,
+      files:{[GIST_FILE]:{content: JSON.stringify(payload())}} })});
+    syncCfg.gistId = g.id; saveSyncCfg();
+  }
+  async function syncNow(){
+    if(!syncOn()) return;
+    if(!navigator.onLine){ setBadge('☁️ offline'); return; }
+    if(syncBusy){ syncPending = true; return; }
+    syncBusy = true; setBadge('☁️ đang đồng bộ…');
+    try{
+      let g;
+      try{ g = await gh('/gists/'+syncCfg.gistId); }
+      catch(e){ if(e.status===404){ await createGist(); g = await gh('/gists/'+syncCfg.gistId); } else throw e; }
+      const f = g.files && g.files[GIST_FILE];
+      let remote = {words:[], tomb:{}, sessions:0}, remoteText = '';
+      if(f){
+        remoteText = f.content || '';
+        if(f.truncated && f.raw_url) remoteText = await (await fetch(f.raw_url, {cache:'no-store'})).text();
+        try{ remote = JSON.parse(remoteText) || remote; }catch(e){}
+      }
+      const merged = mergeData(remote);
+      const localBefore = JSON.stringify({w:db.words, t:db.tomb, s:db.sessions||0, ss:db.sstat, g:db.gdone});
+      const localAfter = JSON.stringify({w:merged.words, t:merged.tomb, s:merged.sessions, ss:merged.sstat, g:merged.gdone});
+      if(localBefore !== localAfter){
+        db.words = merged.words; db.tomb = merged.tomb; db.sessions = merged.sessions; db.sstat = merged.sstat; db.gdone = merged.gdone;
+        if(cur){ const nw = db.words.find(w=>w.hanzi===cur.hanzi); if(nw) cur = nw; }
+        saveLocal(); refreshViews();
+      }
+      const out = JSON.stringify(merged);
+      if(out !== remoteText){
+        await gh('/gists/'+syncCfg.gistId, {method:'PATCH', body: JSON.stringify({files:{[GIST_FILE]:{content: out}}})});
+      }
+      syncCfg.last = Date.now(); saveSyncCfg();
+      setBadge('☁️ '+hhmm(syncCfg.last)); $('syncMsg').textContent='';
+    }catch(e){
+      setBadge(e.status===401 ? '☁️ lỗi token' : '☁️ lỗi');
+      $('syncMsg').textContent = explainErr(e) + '\nBấm "🩺 Kiểm tra đồng bộ" để xem chi tiết.';
+    }finally{
+      syncBusy = false; renderSyncUI();
+      if(syncPending){ syncPending = false; setTimeout(syncNow, 500); }
+    }
+  }
+  $('syncConnect').addEventListener('click', async ()=>{
+    const tok = $('tokIn').value.trim();
+    if(!tok){ toast('Hãy dán GitHub token'); return; }
+    const btn = $('syncConnect'); btn.disabled = true; $('syncMsg').textContent = 'Đang kết nối…';
+    syncCfg = {token: tok};
+    try{
+      const u = await gh('/user'); syncCfg.login = u.login;
+      let found = null;
+      for(let page=1; page<=5 && !found; page++){
+        const list = await gh('/gists?per_page=100&page='+page);
+        found = list.find(g=>g.files && g.files[GIST_FILE]);
+        if(list.length < 100) break;
+      }
+      if(found){ syncCfg.gistId = found.id; saveSyncCfg(); }
+      else { await createGist(); }
+      $('tokIn').value = ''; $('syncMsg').textContent = found ? 'Đã tìm thấy dữ liệu cũ, đang gộp…' : 'Đã tạo kho dữ liệu mới.';
+      renderSyncUI(); await syncNow();
+      toast('Đã bật đồng bộ');
+    }catch(e){
+      syncCfg = {}; saveSyncCfg(); renderSyncUI();
+      $('syncMsg').textContent = explainErr(e) + '\nBấm "🩺 Kiểm tra đồng bộ" để xem chi tiết.';
+    }finally{ btn.disabled = false; }
+  });
+  function explainErr(e){
+    if(e.status===0) return '✗ Không gọi được tới GitHub. Có thể mất mạng, hoặc bạn đang mở bản trong Claude (bản đó không đồng bộ được, hãy mở bản github.io).';
+    if(e.status===401) return '✗ Token sai, đã hết hạn hoặc đã bị xóa. Hãy tạo token mới rồi dán lại.';
+    if(e.status===403||e.status===404) return '✗ Token chưa có quyền Gist (lỗi '+e.status+'). Token classic: tick ô "gist". Token fine-grained: Account permissions → Gists → Read and write.';
+    if(e.status===422) return '✗ GitHub từ chối dữ liệu (lỗi 422): '+(e.ghMsg||'');
+    return '✗ Lỗi GitHub: '+e.message;
+  }
+  $('syncDiagBtn').addEventListener('click', async ()=>{
+    const out=[]; const put=t=>{ out.push(t); $('syncMsg').textContent=out.join('\n'); };
+    $('syncMsg').textContent='Đang kiểm tra…';
+    put('• Phiên bản: '+APP_VERSION+' · địa chỉ: '+location.hostname);
+    if(!/github\.io$/.test(location.hostname)) put('⚠️ Không phải bản github.io. Bản trong Claude không đồng bộ được.');
+    put(navigator.onLine ? '✓ Có mạng' : '✗ Thiết bị đang offline');
+    const tok = syncCfg.token || $('tokIn').value.trim();
+    if(!tok){ put('✗ Chưa có token. Dán token vào ô rồi bấm Kết nối.'); return; }
+    const saved = syncCfg; syncCfg = Object.assign({}, saved, {token: tok});
+    try{
+      const u = await gh('/user', {withHeaders:true});
+      put('✓ Token hợp lệ, tài khoản: '+u.data.login);
+      if(u.scopes!==null){
+        const sc = u.scopes.split(',').map(x=>x.trim()).filter(Boolean);
+        put(sc.includes('gist') ? '✓ Token classic có quyền gist' : '✗ Token classic CHƯA có quyền gist (đang có: '+(sc.join(', ')||'không có')+'). Hãy sửa token và tick ô "gist".');
+      } else put('• Token fine-grained: cần quyền Gists → Read and write');
+      const list = await gh('/gists?per_page=100');
+      const found = list.find(g=>g.files && g.files[GIST_FILE]);
+      put(found ? ('✓ Đã tìm thấy kho dữ liệu trên GitHub ('+found.id.slice(0,7)+'…)') : '• Chưa có kho dữ liệu trên GitHub (sẽ được tạo khi bấm Kết nối)');
+      if(saved.gistId){
+        put(found && found.id===saved.gistId ? '✓ Máy này đang dùng đúng kho đó' : '⚠️ Máy này đang dùng một kho khác ('+saved.gistId.slice(0,7)+'…). Hãy bấm Ngắt kết nối rồi Kết nối lại.');
+        const g = await gh('/gists/'+saved.gistId);
+        let n='?'; try{ n = JSON.parse(g.files[GIST_FILE].content).words.length; }catch(_){}
+        put('✓ Đọc được kho dữ liệu: '+n+' từ trên GitHub, '+db.words.length+' từ trên máy này');
+        await gh('/gists/'+saved.gistId, {method:'PATCH', body: JSON.stringify({description:'Dữ liệu app Luyện viết chữ Hán (tự động đồng bộ)'})});
+        put('✓ Ghi thử lên GitHub thành công');
+        put(syncCfg.last ? ('• Lần đồng bộ gần nhất: '+new Date(syncCfg.last).toLocaleString('vi-VN')) : '• Máy này chưa đồng bộ lần nào');
+      } else put('• Máy này chưa kết nối. Bấm Kết nối để bắt đầu đồng bộ.');
+    }catch(e){ put(explainErr(e)); }
+    finally{ syncCfg = saved; }
+  });
+  $('syncNowBtn').addEventListener('click', syncNow);
+  $('syncOffBtn').addEventListener('click', ()=>askConfirm('Ngắt đồng bộ trên thiết bị này? Dữ liệu trên máy và trên GitHub vẫn được giữ.', ()=>{
+    syncCfg = {}; saveSyncCfg(); $('syncMsg').textContent=''; renderSyncUI();
+  }));
+  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') syncNow(); });
+  window.addEventListener('online', syncNow);
+  window.addEventListener('offline', ()=>{ if(syncOn()) setBadge('☁️ offline'); });
+  setInterval(()=>{ if(document.visibilityState==='visible') syncNow(); }, 90000);
+  syncInit = true;
+  $('appVer').textContent = APP_VERSION;
+  if(!/github\.io$/.test(location.hostname) && location.protocol.startsWith('http')) $('syncHostWarn').textContent = 'Bạn đang mở app ở '+location.hostname+'. Đồng bộ chỉ chạy trên bản github.io.';
+  renderSyncUI();
+  if(syncOn()) setTimeout(syncNow, 800);
+  renderStartInfo();
+  renderVocab();
+})();
+</script>
+</body>
+</html>
