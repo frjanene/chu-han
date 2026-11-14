@@ -185,6 +185,22 @@
   .lwords{display:flex;flex-wrap:wrap;gap:6px}
   .lword{border:1px solid var(--line);background:var(--soft);border-radius:10px;padding:6px 10px;display:flex;flex-direction:column;align-items:center;cursor:pointer;font-family:inherit;color:var(--ink)}
   .lword b{font-size:1.15rem;font-weight:500} .lword span{font-size:.7rem;color:var(--blue)}
+
+  /* Cấu tạo chữ */
+  .ety{border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin:8px 0;background:#fffdf9}
+  .ety-head{display:flex;align-items:center;gap:12px}
+  .ety-ch{font-size:2.4rem;font-weight:500;line-height:1}
+  .ety-type{display:inline-block;background:#ecfdf5;color:#047857;border-radius:999px;padding:1px 8px;font-size:.75rem;font-weight:800}
+  .ety-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .ety-part{flex:1 1 140px;background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:2px}
+  .ety-part i{font-style:normal;font-size:.7rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .ety-part b{font-size:1.5rem;font-weight:500}
+  .ety-part span{font-size:.85rem}
+  .ety-part em{font-style:normal;font-size:.78rem;color:#92400e}
+  .ety-part.sem{border-color:#bbf7d0;background:#f0fdf4}
+  .ety-part.pho{border-color:#bfdbfe;background:#eff6ff}
+  .ety-mini{font-size:.88rem;line-height:1.6;color:#374151;text-align:left;background:var(--soft);border-radius:10px;padding:6px 10px}
+  .mn-note{font-size:.88rem;text-align:left;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:6px 10px;margin-top:6px}
   /* ================= Giao diện mới ================= */
   :root{
     --bg:#f4f5f9; --card:#ffffff; --ink:#111827; --muted:#6b7280; --line:#e7e8ef; --soft:#f6f7fb;
@@ -347,6 +363,7 @@
       <div class="pinyin" id="rPinyin"></div>
       <div style="font-weight:600;margin:4px 0 10px" id="rMeaning"></div>
       <div id="rPos" style="margin:-4px 0 8px"></div>
+      <div id="rEty" style="margin:0 0 10px"></div>
       <p class="muted" id="rDetail"></p>
       <div class="row">
         <button class="btn" id="rReplay">🎞️ Xem lại cách viết</button>
@@ -1172,6 +1189,7 @@
     $('rPinyin').textContent = cur.pinyin;
     $('rMeaning').textContent = cur.meaning;
     $('rPos').innerHTML = cur.pos ? '<span class="pos">'+esc(cur.pos)+'</span>' : '';
+    fillEty($('rEty'), cur, true);
     const parts=[];
     if(gaveUp) parts.push('Bạn đã xem đáp án');
     parts.push('Số nét sai: '+wordMistakes);
@@ -1550,8 +1568,10 @@
       (fcFront==='vi' ? '<div class="hz fc-hz">'+esc(fcCur.hanzi)+'</div>' : '')+
       '<div class="pinyin" style="font-size:1.2rem">'+esc(fcCur.pinyin||'')+' <button class="btn small" id="fcSay">🔊</button></div>'+
       (fcFront==='hz' ? '<div class="fc-vi" style="font-size:1.1rem">'+esc(fcCur.meaning)+'</div>'+(fcCur.pos?'<span class="pos">'+esc(fcCur.pos)+'</span>':'') : '')+
+      '<div id="fcEty" style="margin-top:8px"></div>'+
       '<div style="margin-top:8px"><button class="btn small ghost" id="fcDetail">Xem chi tiết từ ›</button></div>';
     show('fcBack',true); show('fcShow',false); show('fcRate',true);
+    fillEty($('fcEty'), fcCur, true);
     [1,2,3,4].forEach(r=>{ $('fcI'+r).textContent = fmtIvl(schedule(fcCur, r)); });
     $('fcSay').addEventListener('click', e=>{ e.stopPropagation(); say(fcCur.hanzi); });
     $('fcDetail').addEventListener('click', e=>{ e.stopPropagation(); openDetail(fcCur.id); });
@@ -1609,8 +1629,12 @@
           '<button class="btn small" id="dSay">🔊</button> <button class="btn small" id="dSlow">🐢</button></div>'+
         '<div style="text-align:center;font-size:1.15rem;font-weight:600;margin:4px 0">'+esc(w.meaning)+'</div>'+
         '<div style="text-align:center">'+(w.pos?'<span class="pos">'+esc(w.pos)+'</span>':'')+'</div>'+
+        '<div class="d-sec">🧩 Cấu tạo chữ & gợi nhớ</div><div id="dEty"></div>'+
+        '<div class="d-sec">📝 Câu chuyện ghi nhớ của bạn</div>'+
+        '<textarea id="dMn" rows="2" placeholder="Ví dụ: 好 = 女 (phụ nữ) + 子 (con) → mẹ bế con là điều tốt" style="min-height:60px">'+esc(w.mn||'')+'</textarea>'+
+        '<div class="muted" id="dMnSaved" style="font-size:.75rem;min-height:1em"></div>'+
         '<div class="d-sec">📈 Tiến độ</div><div class="muted" style="font-size:.88rem">Viết: '+w.correct+' đúng / '+w.wrong+' sai'+(t?(' ('+Math.round(w.correct*100/t)+'%)'):'')+
-          ' · Quiz: '+(w.qok||0)+' đúng / '+(w.qbad||0)+' sai<br>'+srsTxt+'</div>'+
+          '<br>'+srsTxt+'</div>'+
         '<div class="d-sec">📝 Câu ví dụ</div>'+(sents.length ? sents.map(x=>'<div class="gx"><div class="row" style="align-items:flex-start"><div style="flex:1"><div class="hz" style="font-size:1.1rem">'+esc(x.zh).split(esc(w.hanzi)).join('<mark>'+esc(w.hanzi)+'</mark>')+'</div><div class="pinyin" style="font-size:.85rem">'+esc(x.py)+'</div><div class="muted">'+esc(x.vi)+'</div></div><button class="btn small" style="flex:0 0 auto" data-say="'+esc(x.zh)+'">🔊</button></div></div>').join('') : '<div class="muted" style="font-size:.88rem">Chưa có câu ví dụ chứa từ này trong phần ngữ pháp.</div>')+
         '<div class="d-sec">🔗 Từ có chung chữ</div>'+(related.length ? '<div class="row" style="justify-content:flex-start;gap:6px">'+related.map(x=>'<button class="btn small" style="flex:0 0 auto" data-detail="'+x.id+'"><span class="hz">'+esc(x.hanzi)+'</span> <span class="muted">'+esc(x.meaning.slice(0,18))+'</span></button>').join('')+'</div>' : '<div class="muted" style="font-size:.88rem">Không có từ nào khác trong danh sách dùng chung chữ.</div>')+
         '<div class="row" style="margin-top:14px"><button class="btn" id="dWeak">'+(w.weak?'⭐ Bỏ khỏi Cần ôn lại':'☆ Thêm vào Cần ôn lại')+'</button><button class="btn" id="dEdit">✏️ Sửa từ</button><button class="btn primary" id="dWrite">✍️ Luyện viết từ này</button></div>'
@@ -1626,6 +1650,8 @@
     } else {
       $('dChars').innerHTML = chars.map(c=>'<div class="d-char hz" style="font-size:4rem">'+esc(c)+'</div>').join('');
     }
+    if(!edit) fillEty($('dEty'), w, false);
+    const mnEl=$('dMn'); if(mnEl){ let mt; mnEl.addEventListener('input', ()=>{ clearTimeout(mt); mt=setTimeout(()=>{ w.mn=mnEl.value.trim().slice(0,400); touch(w); save(); $('dMnSaved').textContent='✓ Đã lưu'; }, 600); }); }
     const on=(id,f)=>{ const el=$(id); if(el) el.addEventListener('click', f); };
     on('dClose', closeDetail);
     on('dSay', ()=>say(w.hanzi)); on('dSlow', ()=>say(w.hanzi,true));
@@ -1735,7 +1761,7 @@
           const ch=chars[i++];
           if(out[ch]){ done++; continue; }
           active++;
-          loadCharData(ch, d=>{ out[ch]={strokes:d.strokes, medians:d.medians, radStrokes:d.radStrokes}; done++; active--; $('selfMsg').textContent='Đang gom dữ liệu nét: '+done+'/'+chars.length+' chữ…'; next(); },
+          loadCharData(ch, d=>{ out[ch]=Object.assign({}, out[ch]||{}, {strokes:d.strokes, medians:d.medians, radStrokes:d.radStrokes}); done++; active--; $('selfMsg').textContent='Đang gom dữ liệu nét: '+done+'/'+chars.length+' chữ…'; next(); },
                            ()=>{ fail.push(ch); active--; next(); });
         }
         if(i>=chars.length && active===0) resolve();
@@ -1743,13 +1769,93 @@
       next();
     });
     $('dlData').disabled=false;
+    try{ $('selfMsg').textContent='Đang gom dữ liệu cấu tạo chữ…'; const em=await etyFor(chars); Object.keys(em).forEach(c=>{ out[c]=Object.assign(out[c]||{}, {e:em[c]}); }); }catch(e){}
     const txt=JSON.stringify(out);
     downloadBlob('stroke-data.json', txt);
     $('selfMsg').textContent='✓ Đã tạo stroke-data.json: '+Object.keys(out).length+' chữ ('+Math.round(txt.length/1024)+' KB)'+(fail.length?('. Không lấy được '+fail.length+' chữ: '+fail.slice(0,20).join('')):'')+'. Tải file này lên repo GitHub. Khi thêm từ mới có chữ mới, bấm lại để cập nhật file.';
   });
 
+
+  // ================= Cấu tạo chữ & gợi nhớ =================
+  const RAD = {"人":["Nhân","người","hình người đứng nghiêng"],"亻":["Nhân đứng","người","dạng của 人 khi đứng bên trái chữ"],"儿":["Nhân đi","người, chân người","hình hai chân người đang bước"],"口":["Khẩu","miệng; lời nói, ăn uống","hình cái miệng mở"],"囗":["Vi","vây quanh, khung bao","hình một vòng rào khép kín"],"女":["Nữ","phụ nữ","hình người phụ nữ quỳ, khoanh tay"],"子":["Tử","con, trẻ nhỏ","hình đứa bé quấn tã, dang hai tay"],"日":["Nhật","mặt trời, ngày; thời gian, ánh sáng","hình mặt trời"],"月":["Nguyệt / Nhục","mặt trăng, tháng; bên trái chữ thường là 肉 thịt, bộ phận cơ thể","hình mặt trăng khuyết"],"肉":["Nhục","thịt, cơ thể","hình miếng thịt có thớ"],"木":["Mộc","cây, gỗ","hình cái cây có cành và rễ"],"水":["Thủy","nước","hình dòng nước chảy"],"氵":["Ba chấm thủy","nước, chất lỏng","ba giọt nước (dạng của 水 bên trái)"],"火":["Hỏa","lửa","hình ngọn lửa bốc lên"],"灬":["Bốn chấm hỏa","lửa, nhiệt","bốn đốm lửa (dạng của 火 dưới chữ)"],"土":["Thổ","đất","hình mô đất nhô lên khỏi mặt đất"],"山":["Sơn","núi","hình ba ngọn núi"],"心":["Tâm","tim; tình cảm, suy nghĩ","hình quả tim"],"忄":["Tâm đứng","tình cảm, tâm trạng","dạng của 心 bên trái chữ"],"手":["Thủ","tay","hình bàn tay xòe năm ngón"],"扌":["Thủ","tay; hành động bằng tay","dạng của 手 bên trái chữ"],"言":["Ngôn","lời nói","hình cái miệng đang nói"],"讠":["Ngôn","lời nói, ngôn ngữ","dạng giản thể của 言"],"金":["Kim","kim loại, vàng","hình quặng kim loại trong đất"],"钅":["Kim","kim loại","dạng giản thể của 金 bên trái"],"门":["Môn","cửa","hình hai cánh cửa"],"马":["Mã","ngựa","hình con ngựa (giản thể)"],"鸟":["Điểu","chim","hình con chim"],"鱼":["Ngư","cá","hình con cá"],"目":["Mục","mắt; nhìn","hình con mắt dựng đứng"],"耳":["Nhĩ","tai; nghe","hình cái tai"],"足":["Túc","chân; đi lại","hình bàn chân"],"⻊":["Túc","chân, đi lại","dạng của 足 bên trái chữ"],"走":["Tẩu","đi, chạy","hình người vung tay chạy trên bàn chân"],"辶":["Sước","bước đi, di chuyển, đường","hình con đường và bàn chân"],"彳":["Xích","bước đi, con đường","hình nửa ngã tư đường"],"宀":["Miên","mái nhà","hình mái nhà"],"广":["Nghiễm","nhà rộng, mái hiên","hình mái nhà dựa vách"],"厂":["Hán","sườn núi; xưởng","hình vách đá"],"艹":["Thảo","cỏ, thực vật","hình hai ngọn cỏ"],"竹":["Trúc","tre","hình hai cành tre"],"⺮":["Trúc","tre; đồ làm bằng tre","dạng của 竹 trên đầu chữ"],"米":["Mễ","gạo, hạt","hình những hạt gạo"],"禾":["Hòa","lúa, cây lương thực","hình cây lúa trĩu bông"],"纟":["Mịch","sợi tơ, dây","dạng giản thể của 糸"],"糸":["Mịch","sợi tơ","hình cuộn tơ"],"衣":["Y","áo, quần áo","hình cái áo có cổ"],"衤":["Y","quần áo","dạng của 衣 bên trái chữ"],"示":["Thị","thần linh, cúng tế","hình bàn thờ"],"礻":["Thị","thần linh, may mắn, lễ nghi","dạng của 示 bên trái chữ"],"贝":["Bối","vỏ sò; tiền bạc, của cải","người xưa dùng vỏ sò làm tiền"],"车":["Xa","xe","hình chiếc xe (giản thể)"],"刀":["Đao","dao","hình con dao"],"刂":["Đao đứng","dao; cắt","dạng của 刀 bên phải chữ"],"力":["Lực","sức lực","hình cái cày hoặc cánh tay gồng"],"又":["Hựu","tay phải; lại","hình bàn tay phải"],"寸":["Thốn","tấc; tay, đo lường","hình bàn tay có dấu chỉ cổ tay"],"大":["Đại","to lớn","hình người dang rộng tay chân"],"小":["Tiểu","nhỏ","hình những hạt nhỏ"],"田":["Điền","ruộng","hình thửa ruộng chia ô"],"石":["Thạch","đá","hình hòn đá dưới vách núi"],"雨":["Vũ","mưa; hiện tượng thời tiết","hình giọt mưa rơi từ mây"],"页":["Hiệt","đầu","hình cái đầu người (giản thể)"],"见":["Kiến","nhìn thấy","hình con mắt trên đôi chân"],"食":["Thực","ăn, đồ ăn","hình bát cơm có nắp"],"饣":["Thực","ăn uống","dạng giản thể của 食 bên trái"],"疒":["Nạch","bệnh tật","hình người nằm trên giường bệnh"],"王":["Vương / Ngọc","vua; bên trái chữ thường là 玉 ngọc","hình ba vạch nối trời, đất, người"],"玉":["Ngọc","ngọc, đá quý","hình chuỗi ngọc"],"牛":["Ngưu","trâu, bò","hình đầu trâu có sừng"],"牜":["Ngưu","trâu bò","dạng của 牛 bên trái"],"犬":["Khuyển","chó","hình con chó"],"犭":["Khuyển","thú vật","dạng của 犬 bên trái"],"羊":["Dương","dê, cừu","hình đầu dê có sừng"],"虫":["Trùng","sâu bọ, côn trùng","hình con rắn hoặc con sâu"],"阝":["Phụ / Ấp","bên trái: gò đất; bên phải: vùng đất, thành ấp","hình bậc đất (trái) hoặc vùng dân cư (phải)"],"冫":["Băng","băng, lạnh","hình hai giọt nước đóng băng"],"亠":["Đầu","phía trên, nắp","nét chấm và nét ngang trên đầu"],"冖":["Mịch","khăn trùm, che phủ","hình tấm khăn phủ"],"八":["Bát","tám; tách ra","hình hai nét tách nhau"],"十":["Thập","mười","hình dấu cộng"],"一":["Nhất","một","một nét ngang"],"二":["Nhị","hai","hai nét ngang"],"工":["Công","công việc, thợ","hình cái thước thợ"],"巾":["Cân","khăn, vải","hình mảnh khăn treo"],"弓":["Cung","cái cung","hình cây cung"],"白":["Bạch","trắng","hình ngọn đèn hoặc mặt trời ló"],"立":["Lập","đứng","hình người đứng trên mặt đất"],"穴":["Huyệt","hang, lỗ","hình cửa hang"],"欠":["Khiếm","há miệng; thiếu","hình người há miệng ngáp"],"攵":["Phộc","đánh nhẹ; hành động","hình bàn tay cầm gậy"],"戈":["Qua","cây giáo","hình cây giáo có lưỡi"],"斤":["Cân","cái rìu; cân (đơn vị)","hình cái rìu"],"方":["Phương","vuông; phương hướng","hình cái cày hai lưỡi"],"皿":["Mãnh","bát đĩa","hình cái bát"],"舌":["Thiệt","lưỡi","hình cái lưỡi thè ra khỏi miệng"],"身":["Thân","thân thể","hình người có bụng lớn"],"自":["Tự","tự mình","hình cái mũi (người Trung chỉ vào mũi khi nói 'tôi')"],"气":["Khí","hơi, khí","hình làn hơi bốc lên"],"风":["Phong","gió","giản thể của 風"],"酉":["Dậu","bình rượu","hình cái vò rượu"],"父":["Phụ","cha","hình bàn tay cầm rìu"],"几":["Kỷ","cái ghế nhỏ","hình cái ghế"],"夕":["Tịch","buổi tối","hình mặt trăng mờ"],"文":["Văn","văn chương, chữ","hình người có hình xăm trên ngực"],"止":["Chỉ","dừng lại; bàn chân","hình bàn chân"],"毛":["Mao","lông","hình sợi lông"],"生":["Sinh","sinh ra, sống","hình mầm cây nhú lên khỏi đất"],"用":["Dụng","dùng","hình cái thùng gỗ"],"皮":["Bì","da","hình bàn tay lột da"],"耂":["Lão","già","dạng của 老 trên đầu chữ"],"老":["Lão","già","hình người già chống gậy"],"彡":["Sam","lông, hoa văn","ba nét lông"],"尸":["Thi","thân người, nhà","hình người nằm"],"卜":["Bốc","bói","hình vết nứt trên mai rùa khi bói"],"厶":["Khư","riêng tư","hình cánh tay ôm vào mình"],"夂":["Truy","đến sau","hình bàn chân đi xuống"],"匚":["Phương","cái hộp","hình cái hộp mở một bên"],"西":["Tây","phía tây","hình tổ chim (chim về tổ lúc mặt trời lặn phía tây)"],"爫":["Trảo","móng vuốt, bàn tay úp","dạng của 爪 trên đầu chữ"],"夫":["Phu","đàn ông, chồng","hình người đội mũ cài trâm"],"巴":["Ba","mong, hy vọng; gợi âm ba","hình con rắn lớn"],"也":["Dã","cũng","thường làm phần gợi âm"],"青":["Thanh","xanh","thường làm phần gợi âm qing/jing"]};
+  const ETY_URL = 'https://cdn.jsdelivr.net/gh/skishore/makemeahanzi@master/dictionary.txt';
+  const ETY_TYPES = {pictographic:['Tượng hình','vẽ lại hình dáng sự vật'], ideographic:['Hội ý','ghép các bộ phận để gợi ý nghĩa'], pictophonetic:['Hình thanh','một phần chỉ nghĩa, một phần gợi cách đọc']};
+  const IDS = /[⿰-⿻？]/g;
+  let etyCache = (function(){ try{ return JSON.parse(localStorage.getItem('hanzi-ety'))||{}; }catch(e){ return {}; } })();
+  let etyDictP = null;
+  function saveEty(){ try{ localStorage.setItem('hanzi-ety', JSON.stringify(etyCache)); }catch(e){} }
+  function slimEty(o){ const e=o.etymology||{}; return {d:o.decomposition||'', t:e.type||'', h:e.hint||'', s:e.semantic||'', p:e.phonetic||'', df:o.definition||'', py:(o.pinyin||[])[0]||'', r:o.radical||''}; }
+  function loadEtyDict(){
+    if(etyDictP) return etyDictP;
+    etyDictP = fetch(ETY_URL).then(r=>{ if(!r.ok) throw new Error(r.status); return r.text(); }).then(t=>{
+      const m={}; t.split('\n').forEach(l=>{ if(!l) return; try{ const o=JSON.parse(l); m[o.character]=slimEty(o); }catch(e){} }); return m;
+    }).catch(e=>{ etyDictP=null; throw e; });
+    return etyDictP;
+  }
+  function etyParts(e){ return e && e.d ? [...e.d.replace(IDS,'')].filter(c=>c.trim()) : []; }
+  // Lấy dữ liệu cấu tạo cho danh sách chữ (kèm các bộ phận của chúng); ưu tiên bộ nhớ / gói trong repo
+  async function etyFor(chars){
+    const b = await getLocalBundle();
+    const need = new Set(chars), out = {};
+    const lookup = c => (b && b[c] && b[c].e) || etyCache[c] || null;
+    chars.forEach(c=>{ const e=lookup(c); if(e){ out[c]=e; need.delete(c); etyParts(e).forEach(x=>{ const ex=lookup(x); if(ex) out[x]=ex; }); } });
+    if(need.size){
+      const dict = await loadEtyDict();
+      // lưu đệm cho toàn bộ từ vựng để lần sau dùng offline
+      const all = new Set(db.words.flatMap(w=>[...w.hanzi]).concat(chars));
+      all.forEach(c=>{ const e=dict[c]; if(!e) return; etyCache[c]=e; etyParts(e).forEach(x=>{ if(dict[x]) etyCache[x]=dict[x]; }); });
+      saveEty();
+      chars.forEach(c=>{ const e=etyCache[c]; if(e){ out[c]=e; etyParts(e).forEach(x=>{ if(etyCache[x]) out[x]=etyCache[x]; }); } });
+    }
+    return out;
+  }
+  function partLabel(c, map){
+    const rr = RAD[c];
+    if(rr) return '<b class="hz">'+esc(c)+'</b> <span>'+esc(rr[0])+' – '+esc(rr[1])+'</span>';
+    const e = map[c];
+    return '<b class="hz">'+esc(c)+'</b> <span>'+esc(e && e.py ? e.py : '')+(e && e.df ? ' · '+esc(e.df.split(/[;,]/)[0]) : '')+'</span>';
+  }
+  function etyShort(c, map){
+    const e=map[c]; if(!e) return '';
+    const parts=etyParts(e); if(!parts.length || (parts.length===1 && parts[0]===c)) return '';
+    return '<span class="hz">'+esc(c)+'</span> = '+parts.map(x=>{ const rr=RAD[x]; const role = e.t==='pictophonetic' ? (x===e.s?' (nghĩa)':(x===e.p?' (âm)':'')) : '';
+      return '<span class="hz">'+esc(x)+'</span>'+(rr?' '+esc(rr[1].split(/[;,]/)[0]):'')+role; }).join(' + ');
+  }
+  function etyBlock(c, map){
+    const e=map[c];
+    if(!e) return '<div class="ety"><div class="ety-head"><b class="hz ety-ch">'+esc(c)+'</b><span class="muted">Chưa có dữ liệu cấu tạo cho chữ này.</span></div></div>';
+    const ty = ETY_TYPES[e.t];
+    const parts = etyParts(e).filter(x=>x!==c);
+    let html = '<div class="ety"><div class="ety-head"><b class="hz ety-ch">'+esc(c)+'</b><div><div class="pinyin" style="min-height:0">'+esc(e.py)+'</div>'+
+      (ty ? '<span class="ety-type">'+ty[0]+'</span> <span class="muted" style="font-size:.78rem">'+ty[1]+'</span>' : '')+'</div></div>';
+    if(e.t==='pictophonetic' && (e.s||e.p)){
+      html += '<div class="ety-row">'+(e.s?'<div class="ety-part sem"><i>Phần nghĩa</i>'+partLabel(e.s,map)+(RAD[e.s]?'<em>'+esc(RAD[e.s][2])+'</em>':'')+'</div>':'')+
+        (e.p?'<div class="ety-part pho"><i>Phần gợi âm</i>'+partLabel(e.p,map)+'</div>':'')+'</div>';
+    } else if(parts.length){
+      html += '<div class="ety-row">'+parts.map(x=>'<div class="ety-part"><i>Bộ phận</i>'+partLabel(x,map)+(RAD[x]?'<em>'+esc(RAD[x][2])+'</em>':'')+'</div>').join('')+'</div>';
+    } else if(RAD[c]){
+      html += '<div class="ety-row"><div class="ety-part"><i>Hình gốc</i><em>'+esc(RAD[c][2])+'</em></div></div>';
+    }
+    if(e.h) html += '<div class="muted" style="font-size:.8rem;margin-top:6px">💡 Gợi ý gốc (tiếng Anh): '+esc(e.h)+'</div>';
+    return html+'</div>';
+  }
+  // Ghi chú ghi nhớ riêng cho từng từ (w.mn), đồng bộ cùng từ
+  function mnemonicHtml(w){ return w.mn ? '<div class="mn-note">📝 '+esc(w.mn)+'</div>' : ''; }
+  async function fillEty(el, w, compact){
+    if(!el) return;
+    const chars=[...w.hanzi];
+    el.innerHTML = compact ? '' : '<div class="muted" style="font-size:.85rem">Đang tải cấu tạo chữ…</div>';
+    try{
+      const map = await etyFor(chars);
+      if(compact){ const lines=chars.map(c=>etyShort(c,map)).filter(Boolean); el.innerHTML = (lines.length?'<div class="ety-mini">🧩 '+lines.join('<br>🧩 ')+'</div>':'')+mnemonicHtml(w); }
+      else el.innerHTML = chars.map(c=>etyBlock(c,map)).join('');
+    }catch(e){
+      el.innerHTML = compact ? mnemonicHtml(w) : '<div class="muted" style="font-size:.85rem">Chưa tải được dữ liệu cấu tạo chữ (cần mạng ở lần đầu). '+(chars.map(c=>RAD[c]?('<br><b class="hz">'+esc(c)+'</b> '+esc(RAD[c][0])+' – '+esc(RAD[c][1])):'').join(''))+'</div>';
+    }
+  }
+
   // ================= Đồng bộ qua GitHub Gist =================
-  var APP_VERSION = '3.1';
+  var APP_VERSION = '3.2';
   var syncInit = false;
   var SYNC_KEY = 'hanzi-trainer-sync', GIST_FILE = 'hanzi-trainer-data.json';
   var syncCfg = (function(){ try{ return JSON.parse(localStorage.getItem(SYNC_KEY)) || {}; }catch(e){ return {}; } })();
