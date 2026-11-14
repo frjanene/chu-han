@@ -1,6 +1,6 @@
 /* Service worker: lưu app và dữ liệu nét chữ để dùng offline */
-const VERSION = 'hanzi-pwa-v3';
-const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
+const VERSION = 'hanzi-pwa-v4';
+const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './hanzi-writer.min.js', './stroke-data.json'];
 const LIB = 'https://cdn.jsdelivr.net/npm/hanzi-writer@3/dist/hanzi-writer.min.js';
 
 self.addEventListener('install', e => {

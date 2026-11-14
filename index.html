@@ -12,7 +12,8 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icon-192.png">
 <title>Luyện viết chữ Hán</title>
-<script async src="https://cdn.jsdelivr.net/npm/hanzi-writer@3/dist/hanzi-writer.min.js"></script>
+<script>window.HW_CDN="https://cdn.jsdelivr.net/npm/hanzi-writer@3/dist/hanzi-writer.min.js";window.HW_SRC="cdn";function hwFallback(){var s=document.createElement("script");s.async=true;s.src=window.HW_CDN;document.head.appendChild(s);}</script>
+<script async src="hanzi-writer.min.js" onload="window.HW_SRC='local'" onerror="hwFallback()"></script>
 <style>
   :root{
     --bg:#f6f4ef; --card:#fff; --ink:#1f2937; --muted:#6b7280; --line:#e5e1d8;
@@ -557,6 +558,24 @@
       </div>
     </div>
     <div class="card">
+      <h2>🛡️ Sao lưu & dùng lâu dài</h2>
+      <div class="d-sec" style="margin-top:0">💾 Bản sao lưu dữ liệu học</div>
+      <p class="muted" style="margin-top:0">Xuất toàn bộ từ vựng, deck, lịch ôn thẻ, tiến độ và thống kê ra một file JSON. Khi nhập lại, dữ liệu được <b>gộp</b> với dữ liệu đang có, không ghi đè mất.</p>
+      <div class="row">
+        <button class="btn" id="bkExport">⬇️ Xuất bản sao lưu</button>
+        <button class="btn" id="bkImportBtn">📂 Nhập bản sao lưu</button>
+        <input type="file" id="bkFile" accept=".json,application/json" class="hidden">
+      </div>
+      <div class="d-sec">📦 Không phụ thuộc jsDelivr</div>
+      <p class="muted" style="margin-top:0">Tải 2 file dưới đây về rồi tải lên repo GitHub của app (cùng chỗ với index.html). Sau đó app dùng file trong repo, kể cả khi jsDelivr ngừng hoạt động.</p>
+      <div id="selfStatus" class="round-box" style="margin:8px 0"></div>
+      <div class="row">
+        <button class="btn" id="dlLib">⬇️ hanzi-writer.min.js</button>
+        <button class="btn" id="dlData">⬇️ stroke-data.json</button>
+      </div>
+      <p class="muted" id="selfMsg" style="margin-bottom:0;font-size:.82rem"></p>
+    </div>
+    <div class="card">
       <h2>📅 Lịch học</h2>
       <div id="heatmap"></div>
       <p class="muted" id="hmInfo" style="margin:4px 0 0;font-size:.85rem"></p>
@@ -669,8 +688,22 @@
   // Stroke data loader: try fetch first, fall back to jsDelivr ESM (script-based) when fetch is blocked
   const DATA_BASE='https://cdn.jsdelivr.net/npm/hanzi-writer-data@2.0/';
   const dataCache={};
+  let localBundle = null, localBundleP = null;
+  function getLocalBundle(){
+    if(localBundleP) return localBundleP;
+    localBundleP = (location.protocol.startsWith('http') ? fetch('stroke-data.json', {cache:'no-cache'}) : Promise.reject())
+      .then(r=> r.ok ? r.json() : null).catch(()=>null)
+      .then(b=>{ localBundle = (b && typeof b==='object') ? b : null; return localBundle; });
+    return localBundleP;
+  }
   function loadCharData(ch, onLoad, onError){
     if(dataCache[ch]){ onLoad(dataCache[ch]); return; }
+    getLocalBundle().then(b=>{
+      if(b && b[ch] && b[ch].strokes){ dataCache[ch]=b[ch]; onLoad(b[ch]); return; }
+      loadCharDataCdn(ch, onLoad, onError);
+    });
+  }
+  function loadCharDataCdn(ch, onLoad, onError){
     const url = DATA_BASE + encodeURIComponent(ch) + '.json';
     fetch(url).then(r=> r.ok ? r.json() : Promise.reject(new Error('http '+r.status)))
       .catch(()=> import(url + '/+esm').then(m=> m.default || m))
@@ -707,7 +740,7 @@
       try{ window.scrollTo({top:0}); }catch(e){}
       ['practice','review','translate','vocab','stats'].forEach(t=>show('tab-'+t, t===b.dataset.tab));
       if(b.dataset.tab==='vocab') renderVocab();
-      if(b.dataset.tab==='stats'){ renderStats(); renderSkillStats(); renderHeatmap(); }
+      if(b.dataset.tab==='stats'){ renderStats(); renderSkillStats(); renderHeatmap(); renderSelfStatus(); }
       if(b.dataset.tab==='review'){ if($('fcCard').classList.contains('hidden')) renderReviewHome(); }
       if(b.dataset.tab==='translate') renderTrSetup();
       if(b.dataset.tab==='practice') renderStartInfo();
@@ -1638,8 +1671,85 @@
   }
 
 
+
+  // ================= Sao lưu & tự lưu trữ =================
+  function downloadBlob(name, text, type){
+    const blob = new Blob([text], {type: type||'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 4000);
+  }
+  $('bkExport').addEventListener('click', ()=>{
+    const data = Object.assign({app:'hanzi-trainer', exportedAt:new Date().toISOString(), version:APP_VERSION}, payload(), {settings: db.settings});
+    downloadBlob('chu-han-sao-luu-'+dayKey()+'.json', JSON.stringify(data));
+    toast('Đã tạo file sao lưu ('+db.words.length+' từ). Trên iPad: chọn "Lưu vào Tệp" để giữ file.');
+  });
+  $('bkImportBtn').addEventListener('click', ()=>$('bkFile').click());
+  $('bkFile').addEventListener('change', ()=>{
+    const f=$('bkFile').files[0]; if(!f) return;
+    const rd=new FileReader();
+    rd.onload=()=>{
+      let d=null; try{ d=JSON.parse(rd.result); }catch(e){}
+      $('bkFile').value='';
+      if(!d || !Array.isArray(d.words)){ toast('File không đúng định dạng sao lưu của app'); return; }
+      askConfirm('Gộp '+d.words.length+' từ trong file sao lưu vào dữ liệu hiện tại? Dữ liệu đang có không bị xóa.', ()=>{
+        const m = mergeData(d);
+        db.words=m.words; db.tomb=m.tomb; db.sessions=m.sessions; db.sstat=m.sstat; db.gdone=m.gdone; db.log=m.log; db.wprog=m.wprog; db.path=m.path;
+        save(); refreshViews(); renderStreak(); renderStats(); renderSkillStats(); renderHeatmap();
+        toast('Đã nhập bản sao lưu: hiện có '+db.words.length+' từ');
+      });
+    };
+    rd.readAsText(f);
+  });
+  function renderSelfStatus(){
+    getLocalBundle().then(b=>{
+      const libLocal = window.HW_SRC==='local';
+      const n = b ? Object.keys(b).length : 0;
+      const need = [...new Set(db.words.flatMap(w=>[...w.hanzi]))];
+      const missing = b ? need.filter(c=>!b[c]).length : need.length;
+      $('selfStatus').innerHTML =
+        (libLocal ? '✓ Thư viện vẽ chữ: <b>đang dùng file trong repo</b>' : '• Thư viện vẽ chữ: đang dùng jsDelivr')+'<br>'+
+        (b ? ('✓ Dữ liệu nét: <b>'+n+' chữ trong repo</b>'+(missing?(' · còn '+missing+' chữ mới chưa có, hãy tải lại stroke-data.json'):' · đủ cho toàn bộ từ vựng')) : '• Dữ liệu nét: đang dùng jsDelivr ('+need.length+' chữ trong danh sách)');
+    });
+  }
+  $('dlLib').addEventListener('click', async ()=>{
+    $('selfMsg').textContent='Đang tải thư viện…';
+    try{
+      const src = window.HW_SRC==='local' ? 'hanzi-writer.min.js' : window.HW_CDN;
+      const r = await fetch(src); if(!r.ok) throw new Error(r.status);
+      const t = await r.text(); if(t.length<10000) throw new Error('file quá nhỏ');
+      downloadBlob('hanzi-writer.min.js', t, 'application/javascript');
+      $('selfMsg').textContent='✓ Đã tạo hanzi-writer.min.js ('+Math.round(t.length/1024)+' KB). Tải file này lên repo GitHub.';
+    }catch(e){ $('selfMsg').textContent='✗ Không tải được thư viện ('+e.message+'). Kiểm tra mạng rồi thử lại.'; }
+  });
+  $('dlData').addEventListener('click', async ()=>{
+    const chars=[...new Set(db.words.flatMap(w=>[...w.hanzi]).concat(SENTS.flatMap(x=>[...x.zh]).filter(c=>/[㐀-鿿]/.test(c))))];
+    const out = Object.assign({}, (await getLocalBundle())||{});
+    let done=0, fail=[];
+    $('dlData').disabled=true;
+    await new Promise(resolve=>{
+      let i=0, active=0;
+      const next=()=>{
+        if(i>=chars.length && active===0) return resolve();
+        while(active<6 && i<chars.length){
+          const ch=chars[i++];
+          if(out[ch]){ done++; continue; }
+          active++;
+          loadCharData(ch, d=>{ out[ch]={strokes:d.strokes, medians:d.medians, radStrokes:d.radStrokes}; done++; active--; $('selfMsg').textContent='Đang gom dữ liệu nét: '+done+'/'+chars.length+' chữ…'; next(); },
+                           ()=>{ fail.push(ch); active--; next(); });
+        }
+        if(i>=chars.length && active===0) resolve();
+      };
+      next();
+    });
+    $('dlData').disabled=false;
+    const txt=JSON.stringify(out);
+    downloadBlob('stroke-data.json', txt);
+    $('selfMsg').textContent='✓ Đã tạo stroke-data.json: '+Object.keys(out).length+' chữ ('+Math.round(txt.length/1024)+' KB)'+(fail.length?('. Không lấy được '+fail.length+' chữ: '+fail.slice(0,20).join('')):'')+'. Tải file này lên repo GitHub. Khi thêm từ mới có chữ mới, bấm lại để cập nhật file.';
+  });
+
   // ================= Đồng bộ qua GitHub Gist =================
-  var APP_VERSION = '3.0';
+  var APP_VERSION = '3.1';
   var syncInit = false;
   var SYNC_KEY = 'hanzi-trainer-sync', GIST_FILE = 'hanzi-trainer-data.json';
   var syncCfg = (function(){ try{ return JSON.parse(localStorage.getItem(SYNC_KEY)) || {}; }catch(e){ return {}; } })();
